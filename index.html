@@ -479,13 +479,17 @@ html, body, a, button, .card{ cursor:none; }
   position:relative; height:0; overflow:hidden; margin:0 1vw 0 8%;
   transition:height .42s cubic-bezier(.2,.7,.2,1), margin .42s ease;
   border-radius:14px;
+  background:transparent;
+  border:none;
+}
+.vx-item.open .vx-shot{
+  height:8.6vw; margin-bottom:.7vw;
   background:rgba(255,255,255,.16);
   border:1px solid rgba(255,255,255,.42);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.45);
   backdrop-filter:blur(18px) saturate(1.35);
   -webkit-backdrop-filter:blur(18px) saturate(1.35);
 }
-.vx-item.open .vx-shot{ height:8.6vw; margin-bottom:.7vw; }
 .vx-shot img{ width:100%; height:100%; object-fit:contain; display:block; padding:6%; box-sizing:border-box; }
 .vx-explore{
   position:absolute; left:7%; top:36%;
@@ -549,7 +553,7 @@ html, body, a, button, .card{ cursor:none; }
   opacity:0; pointer-events:none;
 }
 .app.vx-s2 .globe-wrap{ left:16%; top:calc(50% - 17vw); width:36%; }
-.app.vx-s3 .globe-wrap{ opacity:0; }
+.app.vx-s3 .globe-wrap{ opacity:1; }
 .vx-modal{
   position:absolute; left:50%; top:18%; transform:translateX(-50%);
   width:min(380px, 34%); z-index:12; background:#fdfdfd; color:#1a2733;
