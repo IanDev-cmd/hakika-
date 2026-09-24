@@ -4,7 +4,7 @@
       <stop offset="0" stop-color="#3fc4e8"/><stop offset=".6" stop-color="#0b6ba8"/><stop offset="1" stop-color="#07406e"/>
     </linearGradient>
   </defs>
-  <rect width="640" height="400" fill="url(#g)"/>
+  <rect width="640" height="400" fill="none"/>
   <g fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round">
     <path d="M250 90h-40v40M430 90h40v40M210 270h-40v40M470 270h40v40"/>
     <ellipse cx="320" cy="200" rx="78" ry="96"/>

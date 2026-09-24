@@ -247,12 +247,17 @@ html, body, a, button, .card{ cursor:none; }
 }
 .card .shot{
   position:absolute; right:0; top:0;
-  width:87.5%;                       /* image occupies 14% of 16% column */
+  width:87.5%;
   height:100%;
   overflow:hidden;
-  background:#0d3f6d;
+  border-radius:16px;
+  background:rgba(255,255,255,.16);
+  border:1px solid rgba(255,255,255,.42);
+  box-shadow:0 10px 28px rgba(0,24,56,.18), inset 0 1px 0 rgba(255,255,255,.45);
+  backdrop-filter:blur(18px) saturate(1.35);
+  -webkit-backdrop-filter:blur(18px) saturate(1.35);
 }
-.card .shot img{ width:100%; height:100%; object-fit:cover; display:block; }
+.card .shot img{ width:100%; height:100%; object-fit:contain; display:block; padding:10%; box-sizing:border-box; }
 .card .cap{
   position:absolute; left:0; top:50%; transform:translateY(-50%);
   z-index:2; width:42%;
@@ -316,9 +321,14 @@ html, body, a, button, .card{ cursor:none; }
 }
 .panel .shot{
   position:absolute; left:49.3%; right:5.6%; top:10.8%; bottom:-6%;
-  overflow:hidden; background:#cbb96f;
+  overflow:hidden; border-radius:16px;
+  background:rgba(255,255,255,.55);
+  border:1px solid rgba(255,255,255,.7);
+  box-shadow:0 10px 28px rgba(0,24,56,.12), inset 0 1px 0 rgba(255,255,255,.8);
+  backdrop-filter:blur(18px) saturate(1.35);
+  -webkit-backdrop-filter:blur(18px) saturate(1.35);
 }
-.panel .shot img{ width:100%; height:100%; object-fit:cover; display:block; }
+.panel .shot img{ width:100%; height:100%; object-fit:contain; display:block; padding:8%; box-sizing:border-box; }
 
 /* ------------------------------------------------------------- states */
 .app.detail .hero,
@@ -465,10 +475,15 @@ html, body, a, button, .card{ cursor:none; }
 .vx-shot{
   position:relative; height:0; overflow:hidden; margin:0 1vw 0 8%;
   transition:height .42s cubic-bezier(.2,.7,.2,1), margin .42s ease;
-  background:#123a62;
+  border-radius:14px;
+  background:rgba(255,255,255,.16);
+  border:1px solid rgba(255,255,255,.42);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.45);
+  backdrop-filter:blur(18px) saturate(1.35);
+  -webkit-backdrop-filter:blur(18px) saturate(1.35);
 }
 .vx-item.open .vx-shot{ height:8.6vw; margin-bottom:.7vw; }
-.vx-shot img{ width:100%; height:100%; object-fit:cover; display:block; }
+.vx-shot img{ width:100%; height:100%; object-fit:contain; display:block; padding:6%; box-sizing:border-box; }
 .vx-explore{
   position:absolute; left:7%; top:36%;
   background:#e23b4a; color:#fff; border:none;
@@ -716,11 +731,14 @@ html.is-install #phoneInstall, html.is-app #phoneApp{
 .p-sub{ margin:0 0 18px; font-weight:600; opacity:.9; }
 .p-card{
   position:relative; display:block; width:100%; height:168px; margin:0 0 14px;
-  border:none; border-radius:18px; overflow:hidden; padding:0; text-align:left;
-  box-shadow:0 16px 36px rgba(0,20,50,.28);
+  border:1px solid rgba(255,255,255,.42); border-radius:18px; overflow:hidden; padding:0; text-align:left;
+  background:rgba(255,255,255,.16);
+  box-shadow:0 10px 28px rgba(0,24,56,.18), inset 0 1px 0 rgba(255,255,255,.45);
+  backdrop-filter:blur(18px) saturate(1.35);
+  -webkit-backdrop-filter:blur(18px) saturate(1.35);
 }
-.p-card .shot{ position:absolute; inset:0; }
-.p-card img{ width:100%; height:100%; object-fit:cover; display:block; }
+.p-card .shot{ position:absolute; inset:0; background:transparent; }
+.p-card img{ width:100%; height:100%; object-fit:contain; display:block; padding:8%; box-sizing:border-box; }
 .p-card .cap{
   position:absolute; left:16px; bottom:14px; z-index:2; color:#fff;
   font-size:22px; font-weight:700; line-height:1.1;
@@ -746,7 +764,14 @@ html.is-install #phoneInstall, html.is-app #phoneApp{
 .onboard-view{ width:min(820px, 96vw); overflow:hidden; }
 .onboard-track{ display:flex; transition:transform .45s cubic-bezier(.4,0,.2,1); }
 .ob-slide{ flex:0 0 100%; box-sizing:border-box; }
-.ob-icon{ width:100%; height:180px; object-fit:contain; background:#0d3f6d; border-radius:12px; margin:14px 0; display:block; }
+.ob-icon{
+  width:100%; height:180px; object-fit:contain; display:block; margin:14px 0; padding:18px; box-sizing:border-box;
+  border-radius:16px; background:rgba(255,255,255,.16);
+  border:1px solid rgba(255,255,255,.42);
+  box-shadow:0 10px 28px rgba(0,24,56,.18), inset 0 1px 0 rgba(255,255,255,.45);
+  backdrop-filter:blur(18px) saturate(1.35);
+  -webkit-backdrop-filter:blur(18px) saturate(1.35);
+}
 .ob-stamp{
   min-height:42px; margin:0 0 10px; font-size:22px; font-weight:800; letter-spacing:.08em;
   text-align:center; opacity:0; transform:scale(.6);
@@ -1207,7 +1232,7 @@ function buildCard(c){
   b.type = 'button';
   b.dataset.id = c.id;
   b.innerHTML =
-    '<div class="shot" style="background:' + c.fall + '">' +
+    '<div class="shot">' +
       (c.img ? '<img src="' + c.img + '" alt="" loading="lazy">' : '') +
     '</div>' +
     '<span class="cap">' + c.l1 + '<br>' + c.l2 + '</span>';
@@ -1851,7 +1876,7 @@ function buildPhone(){
     var b = document.createElement('button');
     b.type = 'button';
     b.className = 'p-card';
-    b.innerHTML = '<div class="shot" style="background:' + c.fall + '">' +
+    b.innerHTML = '<div class="shot">' +
       (c.img ? '<img src="' + c.img + '" alt="">' : '') +
       '</div><span class="cap">' + c.l1 + '<br>' + c.l2 + '</span>';
     b.addEventListener('click', function(){

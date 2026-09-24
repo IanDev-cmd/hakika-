@@ -4,7 +4,7 @@
       <stop offset="0" stop-color="#1c2430"/><stop offset="1" stop-color="#070d16"/>
     </linearGradient>
   </defs>
-  <rect width="640" height="400" fill="url(#g)"/>
+  <rect width="640" height="400" fill="none"/>
   <g fill="none" stroke="#7dffa2" stroke-width="7" stroke-linecap="round">
     <path d="M320 78c-62 0-96 48-96 108 0 40 8 70 8 70"/>
     <path d="M416 186c0-60-34-108-96-108"/>
