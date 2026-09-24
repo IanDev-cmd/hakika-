@@ -1,0 +1,1819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hakika</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0470d0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Hakika">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* =====================================================================
+   Measurements below are taken from the reference GIF.
+   Source frame: 800x600 GIF, app frame at x 41-746, y 90-493 => 705x403.
+   Every position is expressed as a % of that frame; the frame fills the
+   viewport here, so 1 reference px = 0.14184vw horizontally.
+   ===================================================================== */
+:root{
+  /* sampled background gradient stops */
+  --bg-0:#0ba6ff;
+  --bg-1:#079af2;
+  --bg-2:#0b8ad9;
+  --bg-3:#0470d0;
+  --bg-4:#0a54ab;
+  --bg-5:#063f92;
+  --bg-6:#002c85;
+
+  --accent:#dc7519;       /* dithered #BE5B0F / #E98B23 -> true value */
+  --panel:#fdfdfd;
+  --panel-ink:#55616e;
+  --rail-veil:rgba(0,14,40,.25);
+
+  /* type scale, ref px -> vw */
+  --t-hero:4.11vw;        /* 29px */
+  --t-detail:5.53vw;      /* 39px */
+  --t-body:0.851vw;       /* 6px  */
+  --t-panel:1.134vw;      /* 8px  */
+  --t-label:0.992vw;      /* 7px  */
+  --t-nav:0.851vw;        /* 6px  */
+
+  /* card list geometry */
+  --card-x:79.9%;
+  --card-w:14.0%;
+  --card-h:15.1%;
+  --card-gap:1.36%;
+}
+
+*{ box-sizing:border-box; }
+html,body{ margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#001135; }
+body{ font-family:'Quicksand',sans-serif; }
+
+/* the reference has zero rounded corners anywhere — verified per-pixel */
+*, *::before, *::after{ border-radius:0; }
+
+/* ---------------------------------------------------------- custom cursor */
+html, body, a, button, .card{ cursor:none; }
+.cursor{
+  position:fixed; left:0; top:0; z-index:9999;
+  width:18px; height:18px; margin:-9px 0 0 -9px;
+  border:2px solid #5dff8a;
+  background:rgba(40,255,120,.22);
+  border-radius:50%; pointer-events:none;
+  box-shadow:0 0 0 7px rgba(50,255,130,.16), 0 0 16px 4px rgba(40,255,140,.95), 0 0 34px 10px rgba(20,190,70,.55);
+  will-change:transform;
+  transition:width .22s ease, height .22s ease, margin .22s ease, box-shadow .22s ease;
+}
+.cursor.hot{
+  width:28px; height:28px; margin:-14px 0 0 -14px;
+  background:rgba(40,255,120,.32);
+  box-shadow:0 0 0 10px rgba(50,255,130,.2), 0 0 22px 6px rgba(40,255,140,1), 0 0 42px 14px rgba(20,190,70,.6);
+}
+.ripple{
+  position:fixed; z-index:9998; width:18px; height:18px; margin:-9px 0 0 -9px;
+  border:2px solid #5dff8a; border-radius:50%;
+  box-shadow:0 0 16px rgba(40,255,140,.85);
+  pointer-events:none; animation:ripple .62s cubic-bezier(.2,.7,.3,1) forwards;
+}
+@keyframes ripple{
+  0%  { transform:scale(1);   opacity:.95; }
+  100%{ transform:scale(3.4); opacity:0;   }
+}
+@media (hover:none){ html,body,a,button,.card{ cursor:auto; } .cursor,.ripple{ display:none; } }
+
+/* ---------------------------------------------------------------- stage */
+.app{
+  position:fixed; inset:0; overflow:hidden;
+  /* brightest at TOP-LEFT (#079af2), floor is #002c85 — not near-black */
+  background:
+    radial-gradient(118% 150% at 9% -2%,
+      var(--bg-0) 0%,
+      var(--bg-1) 17%,
+      var(--bg-2) 31%,
+      var(--bg-3) 45%,
+      var(--bg-4) 61%,
+      var(--bg-5) 77%,
+      var(--bg-6) 100%);
+}
+/* the reference is a dithered GIF; a faint grain keeps the gradient honest */
+.app::before{
+  content:""; position:absolute; inset:0; pointer-events:none; z-index:1;
+  background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.028) 0 1px,transparent 1px 3px);
+  mix-blend-mode:overlay;
+}
+
+/* ----------------------------------------------------------------- rail */
+.rail{
+  position:absolute; left:0; top:0; bottom:0; width:4.26%;
+  background:var(--rail-veil);
+  z-index:8;
+}
+.rail .logo{ position:absolute; left:50%; top:2.2%; transform:translateX(-50%); }
+.rail .logo svg{ width:1.7vw; height:1.7vw; min-width:13px; min-height:13px; display:block; }
+.rail .socials{
+  position:absolute; left:50%; top:84.9%; transform:translateX(-50%);
+  display:flex; flex-direction:column; align-items:center; gap:1.1vw;
+}
+.rail .socials svg{ width:.92vw; height:.92vw; min-width:9px; min-height:9px; opacity:.95; display:block; }
+
+/* ------------------------------------------------------------------ nav */
+.nav{
+  position:absolute; top:4.0%; right:4.7%; z-index:8;
+  display:flex; gap:1.6vw;
+  font-size:var(--t-nav); font-weight:700; letter-spacing:.03em; color:#e2f2fd;
+  transition:opacity .28s ease;
+}
+.nav a{ color:inherit; text-decoration:none; }
+
+/* ---------------------------------------------------------------- globe */
+/* home:   centre 50.5% / 52.4%, diameter 32.2% of frame width
+   detail: centre 79%   / 77%,   diameter 78%   of frame width          */
+.globe-wrap{
+  position:absolute; z-index:2;
+  left:34.4%; top:calc(52.4% - 16.1vw); width:32.2%; aspect-ratio:1/1;
+  transition:left 1s cubic-bezier(.42,0,.2,1),
+             top  1s cubic-bezier(.42,0,.2,1),
+             width 1s cubic-bezier(.42,0,.2,1);
+}
+.app.detail .globe-wrap{
+  left:40%; top:calc(77% - 39vw); width:78%;
+}
+/* glass bubble shell ~1.13x and the faint outer ring ~1.35x */
+.globe-wrap::before,
+.globe-wrap::after{
+  content:""; position:absolute; inset:0; border-radius:50%; pointer-events:none;
+}
+.globe-wrap::before{
+  transform:scale(1.13);
+  border:1px solid rgba(255,255,255,.20);
+  background:radial-gradient(circle at 32% 26%, rgba(255,255,255,.07) 0%, rgba(255,255,255,.015) 30%, transparent 52%);
+  box-shadow:inset 0 -4px 18px rgba(180,235,255,.13);
+}
+.globe-wrap::after{
+  transform:scale(1.35);
+  border:1px solid rgba(255,255,255,.085);
+}
+.globe{
+  position:absolute; inset:-20%; border-radius:50%;
+  /* natural, unboosted color — just a soft atmospheric edge glow */
+  filter:drop-shadow(0 0 1.6vw rgba(120,215,255,.22));
+  transform:scale(var(--gscale,1));
+  transition:transform .9s cubic-bezier(.2,.8,.25,1);
+}
+.globe canvas{ position:absolute; inset:0; width:100%!important; height:100%!important; display:block; }
+
+/* cloud puffs floating in front of the sphere (2-3 in the reference) */
+.cloud{
+  position:absolute; border-radius:50%; pointer-events:none; z-index:3;
+  background:radial-gradient(ellipse at 40% 35%, rgba(255,255,255,.55) 0%, rgba(234,246,255,.4) 46%, rgba(220,240,255,.22) 68%, rgba(210,235,255,0) 100%);
+  filter:blur(.3vw);
+  mix-blend-mode:soft-light;
+}
+.cloud.c1{ left:62%; top:27%; width:12%; height:5.2%; opacity:.6; animation:drift1 17s ease-in-out infinite; }
+.cloud.c2{ left:22%; top:63%; width:9.5%; height:4.2%; opacity:.55; animation:drift2 21s ease-in-out infinite; }
+.cloud.c3{ left:46%; top:18%; width:8%; height:3.6%; opacity:.45; animation:drift1 25s ease-in-out infinite reverse; }
+@keyframes drift1{ 0%,100%{ transform:translate(0,0); } 50%{ transform:translate(-8%,3%); } }
+@keyframes drift2{ 0%,100%{ transform:translate(0,0); } 50%{ transform:translate(9%,-4%); } }
+
+/* pin marker on the detail globe (~60% / 39% of the frame) */
+.pin{
+  position:absolute; left:60%; top:39%; z-index:4;
+  width:1.1vw; height:1.9vw; margin:-.95vw 0 0 -.55vw;
+  border-radius:50%;
+  background:radial-gradient(ellipse at 50% 40%, #ffffff 0%, rgba(255,255,255,.85) 45%, rgba(255,255,255,0) 100%);
+  opacity:0; transition:opacity .4s ease .55s; pointer-events:none;
+}
+.app.detail .pin{ opacity:1; }
+
+/* ------------------------------------------------------------ home view */
+.hero{ position:absolute; left:10.5%; top:13.9%; width:31%; z-index:6; transition:opacity .28s ease; }
+.hero h1{
+  margin:0; font-size:var(--t-hero); font-weight:700;
+  line-height:.97;                    /* measured: 24px ascender, 28px pitch */
+  letter-spacing:-.005em; color:#fff;
+}
+.hero p{
+  margin:2.4vh 0 0; width:93%;
+  font-size:var(--t-body); font-weight:600; line-height:1.72; color:#d9f4fc;
+}
+
+.watch{
+  position:absolute; left:10.5%; top:83.4%; width:13.2%; height:5.7%; z-index:6;
+  display:flex; align-items:center; justify-content:space-between;
+  background:#ffffff; border:none;
+  padding:0 .99vw 0 1.42vw;           /* right inset 7px, left inset 10px */
+  font-family:inherit; font-size:var(--t-label); font-weight:700;
+  letter-spacing:.055em; color:#1a2733; white-space:nowrap;
+  transition:opacity .28s ease;
+}
+.watch .play{
+  width:1.42vw; height:1.42vw;        /* exactly 10x10 ref px, square */
+  flex:0 0 auto; background:var(--accent);
+  display:flex; align-items:center; justify-content:center;
+}
+.watch .play svg{ width:.55vw; height:.55vw; fill:#fff; display:block; }
+
+/* ------------------------------------------------------------ card list */
+.list{
+  position:absolute; left:calc(var(--card-x) - 2%); width:calc(var(--card-w) + 2%);
+  top:17.6%; bottom:10.4%; z-index:6; overflow:hidden;
+  -webkit-mask-image:linear-gradient(to bottom, transparent 0%, #000 7%, #000 88%, transparent 100%);
+          mask-image:linear-gradient(to bottom, transparent 0%, #000 7%, #000 88%, transparent 100%);
+  transition:opacity .28s ease;
+}
+.track{ position:absolute; left:0; top:0; width:100%; will-change:transform; }
+
+.card{
+  position:relative; width:100%; display:block;
+  padding:0 0 0 0; background:none; border:none;
+  margin-bottom:calc(var(--card-gap) * 6.62);  /* gap as % of card height */
+}
+.card .shot{
+  position:absolute; right:0; top:0;
+  width:87.5%;                       /* image occupies 14% of 16% column */
+  height:100%;
+  overflow:hidden;
+  background:#0d3f6d;
+}
+.card .shot img{ width:100%; height:100%; object-fit:cover; display:block; }
+.card .cap{
+  position:absolute; left:0; top:50%; transform:translateY(-50%);
+  z-index:2; width:42%;
+  font-size:var(--t-label); font-weight:700; line-height:1.14; color:#fff;
+  text-align:left; letter-spacing:.005em;
+  text-shadow:0 1px 3px rgba(0,30,60,.32);
+}
+.card::after{ content:""; display:block; padding-top:0; }
+
+.scrollbar{
+  position:absolute; left:96.2%; top:18.6%; height:71%; width:2px;
+  background:rgba(255,255,255,.18); z-index:6;
+  transition:opacity .28s ease;
+}
+.scrollbar i{
+  position:absolute; left:0; width:2px; height:22%;
+  background:rgba(255,255,255,.88);
+  will-change:transform;
+}
+
+/* ---------------------------------------------------------- detail view */
+.detail{ position:absolute; inset:0; z-index:5; pointer-events:none; }
+
+.back{
+  position:absolute; left:12.8%; top:9%; z-index:7;
+  width:2.55vw; height:1.6vw; padding:0;
+  background:none; border:none; opacity:0;
+  transition:opacity .35s ease .12s;
+}
+.back svg{ width:100%; height:100%; display:block; }
+.app.detail .back{ opacity:1; pointer-events:auto; }
+
+.detail h1{
+  position:absolute; left:12.34%; top:16%; width:40%; margin:0; z-index:7;
+  font-size:var(--t-detail); font-weight:700; line-height:.97; color:#fff;
+  opacity:0;
+}
+.campaign{
+  position:absolute; left:79.5%; top:48.8%; z-index:7;
+  font-size:var(--t-nav); font-weight:600; color:rgba(255,255,255,.92);
+  text-shadow:0 1px 3px rgba(0,20,45,.4); opacity:0;
+  transition:opacity .35s ease .5s;
+}
+.app.detail .campaign{ opacity:1; }
+
+.panel{
+  position:absolute; left:12.4%; right:9.6%; top:50%; bottom:auto; height:42%;
+  transform:translateY(-50%); z-index:6;
+  background:var(--panel); overflow:hidden;
+  clip-path:inset(100% 100% 0 0);
+  transition:clip-path .78s cubic-bezier(.66,0,.2,1) .1s;
+}
+.app.detail .panel{ clip-path:inset(0 0 0 0); }
+
+.panel .copy{
+  position:absolute; left:6.2%; top:10.8%; width:41%;
+  font-size:var(--t-panel); font-weight:500; line-height:1.72; color:var(--panel-ink);
+  max-height:78%; overflow:hidden;
+  -webkit-mask-image:linear-gradient(to bottom, #000 86%, transparent 100%);
+          mask-image:linear-gradient(to bottom, #000 86%, transparent 100%);
+}
+.panel .shot{
+  position:absolute; left:49.3%; right:5.6%; top:10.8%; bottom:-6%;
+  overflow:hidden; background:#cbb96f;
+}
+.panel .shot img{ width:100%; height:100%; object-fit:cover; display:block; }
+
+/* ------------------------------------------------------------- states */
+.app.detail .hero,
+.app.detail .watch,
+.app.detail .list,
+.app.detail .scrollbar,
+.app.detail .nav{ opacity:0; pointer-events:none; }
+
+/* flying clone used for the card -> detail FLIP transition */
+.flyer{ position:fixed; z-index:20; overflow:hidden; pointer-events:none; }
+.flyer img{ width:100%; height:100%; object-fit:cover; display:block; }
+.flytitle{
+  position:fixed; z-index:21; pointer-events:none; color:#fff; font-weight:700;
+  line-height:.97; transform-origin:0 0; white-space:nowrap;
+}
+
+@media (prefers-reduced-motion:reduce){
+  *{ animation:none!important; transition-duration:.01ms!important; }
+}
+@media (max-width:760px){
+  :root{ --t-hero:7.4vw; --t-detail:9.4vw; --t-body:2.1vw; --t-panel:2.4vw; --t-label:2.1vw; --t-nav:2.1vw; }
+  .hero{ width:44%; }
+}
+
+/* ------------------------------------------------ video layers (added) */
+.vx-bar{
+  position:absolute; left:7.2%; top:3.1%; right:16%; z-index:9;
+  display:flex; align-items:center; gap:1.1vw;
+  color:#fff; font-weight:700; letter-spacing:.14em; font-size:.78vw;
+}
+.vx-logo{ display:flex; align-items:center; gap:.45vw; letter-spacing:.18em; font-size:.92vw; background:none; border:none; color:#fff; padding:0; font-family:inherit; }
+.vx-logo svg{ width:1.35vw; height:1.35vw; min-width:16px; min-height:16px; }
+.vx-spacer{ flex:1; }
+.vx-link{ background:none; border:none; color:#e7f4ff; font:inherit; letter-spacing:.16em; font-size:.72vw; font-weight:600; padding:0; }
+.vx-search{
+  display:flex; align-items:center; gap:.4vw;
+  border-bottom:1px solid rgba(255,255,255,.45); padding:0 0 .15vw;
+}
+.vx-search input{
+  width:9vw; min-width:72px; background:none; border:none; outline:none;
+  color:#fff; font:inherit; letter-spacing:.08em; font-size:.72vw; font-weight:600;
+}
+.vx-search input::placeholder{ color:rgba(255,255,255,.55); }
+.vx-search svg{ width:.8vw; height:.8vw; min-width:11px; min-height:11px; }
+.vx-menu{
+  width:1.7vw; height:1.7vw; min-width:22px; min-height:22px; border-radius:50%;
+  border:1px solid rgba(255,255,255,.7); background:rgba(8,40,90,.35);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:0;
+}
+.vx-menu i{ display:block; width:46%; height:1px; background:#fff; }
+.vx-dots{
+  position:absolute; left:5.5%; top:46%; z-index:9;
+  display:flex; flex-direction:column; gap:.7vw;
+}
+.vx-dot{
+  width:7px; height:7px; padding:0; border-radius:50%;
+  border:0; background:rgba(255,255,255,.35);
+}
+.vx-dot.on{ background:#fff; box-shadow:0 0 0 4px rgba(255,255,255,.18); }
+.vx-stars{
+  position:absolute; inset:0; z-index:2; pointer-events:none; opacity:0;
+  background-image:
+    radial-gradient(1.4px 1.4px at 18% 28%, #fff 55%, transparent 56%),
+    radial-gradient(1.1px 1.1px at 30% 62%, #fff 55%, transparent 56%),
+    radial-gradient(1.6px 1.6px at 72% 24%, #fff 55%, transparent 56%),
+    radial-gradient(1px 1px at 64% 70%, #fff 55%, transparent 56%),
+    radial-gradient(1.3px 1.3px at 48% 18%, #fff 55%, transparent 56%),
+    radial-gradient(1px 1px at 82% 48%, #fff 55%, transparent 56%),
+    radial-gradient(1.5px 1.5px at 24% 78%, #fff 55%, transparent 56%),
+    radial-gradient(1px 1px at 88% 76%, rgba(255,255,255,.8) 55%, transparent 56%);
+}
+.vx-flare{
+  position:absolute; left:62%; top:22%; width:34%; aspect-ratio:1;
+  border-radius:50%; pointer-events:none; z-index:3; opacity:0;
+  background:radial-gradient(circle, rgba(186,236,255,.95) 0%, rgba(90,190,255,.35) 26%, rgba(40,140,255,0) 68%);
+  filter:blur(1px);
+}
+.app.vx-s1 .vx-stars, .app.vx-s2 .vx-stars, .app.vx-s3 .vx-stars{ opacity:.9; }
+.app.vx-s1 .vx-flare, .app.vx-s2 .vx-flare{ opacity:1; }
+.vx-world{
+  position:absolute; inset:0; z-index:6; pointer-events:none; opacity:0;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1.4vw;
+  transition:opacity .6s ease;
+}
+.vx-brand{
+  display:flex; align-items:center; justify-content:center;
+  font-size:6.4vw; font-weight:700; line-height:1; color:#fff; letter-spacing:-.04em;
+}
+.vx-mini{
+  width:2.35vw; height:2.35vw; min-width:22px; min-height:22px;
+  margin:0 .28vw; border-radius:50%; overflow:hidden; flex:0 0 auto;
+}
+.vx-mini canvas{ width:100%; height:100%; display:block; }
+.vx-digital{
+  margin:0; font-size:3.6vw; font-weight:600; letter-spacing:.01em; color:#fff;
+}
+.app.vx-s1 .vx-world{ opacity:1; }
+.app.vx-s1 .globe-wrap{ opacity:0; }
+.vx-country{
+  position:absolute; left:46%; top:42%; z-index:4; margin:0;
+  font-size:6.4vw; font-weight:700; letter-spacing:.08em; color:rgba(255,255,255,.28);
+  opacity:0; pointer-events:none; transition:opacity .4s ease;
+}
+.app.vx-s2 .vx-country, .app.vx-zoom .vx-country{ opacity:1; }
+.vx-dest{
+  position:absolute; right:3.2%; top:16%; bottom:8%; width:26%; z-index:8;
+  opacity:0; pointer-events:none; transition:opacity .35s ease;
+}
+.app.vx-s2 .vx-dest{ opacity:1; pointer-events:auto; }
+.vx-dest ol{
+  list-style:none; margin:0; padding:0 1.6vw 0 0; height:100%;
+  display:flex; flex-direction:column; justify-content:space-between; position:relative;
+}
+.vx-dest ol::before{
+  content:""; position:absolute; right:0; top:1%; bottom:1%; width:1px; background:rgba(255,255,255,.72);
+}
+.vx-item{ position:relative; }
+.vx-row{
+  position:relative; display:block; width:100%; text-align:right;
+  background:none; border:none; color:rgba(255,255,255,.72);
+  font:inherit; font-size:.78vw; font-weight:600; letter-spacing:.16em;
+  padding:.35vw 1vw .35vw 0;
+}
+.vx-row::before{
+  content:""; position:absolute; right:-1.78vw; top:50%; width:8px; height:8px; margin-top:-4px;
+  border-radius:50%; background:#fff;
+}
+.vx-item.open .vx-row{ color:#fff; font-size:1.05vw; letter-spacing:.2em; }
+.vx-item.open .vx-row::before{
+  width:16px; height:16px; margin-top:-8px; right:-2.05vw;
+  box-shadow:0 0 0 7px rgba(255,255,255,.22);
+}
+.vx-shot{
+  position:relative; height:0; overflow:hidden; margin:0 1vw 0 8%;
+  transition:height .42s cubic-bezier(.2,.7,.2,1), margin .42s ease;
+  background:#123a62;
+}
+.vx-item.open .vx-shot{ height:8.6vw; margin-bottom:.7vw; }
+.vx-shot img{ width:100%; height:100%; object-fit:cover; display:block; }
+.vx-explore{
+  position:absolute; left:7%; top:36%;
+  background:#e23b4a; color:#fff; border:none;
+  font:inherit; font-size:.62vw; font-weight:700; letter-spacing:.14em;
+  padding:.45vw .7vw;
+}
+.vx-stage{
+  position:absolute; left:6.4%; right:4.2%; top:10%; bottom:4.5%; z-index:8;
+  overflow:hidden; opacity:0; pointer-events:none; border-radius:18px;
+  transition:opacity .45s ease;
+}
+.vx-stage img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
+.vx-stage .vx-shade{
+  position:absolute; inset:0;
+  background:linear-gradient(180deg, rgba(8,24,40,.18) 0%, rgba(8,20,32,.08) 40%, rgba(8,20,32,.28) 100%);
+}
+.vx-hero-title{
+  position:absolute; left:8%; right:8%; top:28%; text-align:center; color:#fff;
+}
+.vx-hero-title small{
+  display:block; font-size:2.2vw; font-weight:600; letter-spacing:.42em; opacity:.9;
+}
+.vx-hero-title strong{
+  display:block; margin-top:.2vw; font-size:6.4vw; font-weight:700; letter-spacing:.04em; line-height:.9;
+}
+.vx-book{
+  position:absolute; left:50%; top:62%; transform:translateX(-50%);
+  width:min(640px, 62%); display:flex; align-items:stretch; background:#fff; border-radius:8px;
+  box-shadow:0 10px 30px rgba(0,20,40,.25);
+}
+.vx-field{ flex:1; padding:.7vw 1vw .8vw; border-right:1px solid #e4e8ee; min-width:0; }
+.vx-field label{ display:block; font-size:.62vw; color:#8b95a1; font-weight:600; letter-spacing:.04em; }
+.vx-field input{
+  width:100%; border:none; outline:none; background:none; color:#1c2733;
+  font:inherit; font-size:.95vw; font-weight:700; padding:0;
+}
+.vx-adults{ display:flex; align-items:center; gap:.5vw; }
+.vx-adults b{ font-size:1vw; min-width:1ch; }
+.vx-adults button{
+  width:1.3vw; height:1.3vw; min-width:16px; min-height:16px; border:1px solid #d5dbe3;
+  background:#fff; color:#243140; font-weight:700; line-height:1; padding:0;
+}
+.vx-go{
+  width:4.2vw; min-width:52px; border:none; background:#da2f50; color:#fff;
+  display:flex; align-items:center; justify-content:center; padding:0; border-radius:0 8px 8px 0;
+}
+.vx-go svg{ width:1.1vw; height:1.1vw; min-width:14px; min-height:14px; fill:#fff; }
+.vx-note{
+  position:absolute; left:50%; top:78%; transform:translateX(-50%);
+  color:#fff; font-weight:700; letter-spacing:.08em; font-size:.9vw;
+  opacity:0;
+}
+.vx-note.show{ opacity:1; }
+.app.vx-s3 .vx-stage{ opacity:1; pointer-events:auto; animation:vxOpen .85s cubic-bezier(.16,.84,.3,1); }
+@keyframes vxOpen{ from{ opacity:0; transform:scale(.62); } to{ opacity:1; transform:scale(1); } }
+.app.vx-zoom .globe-wrap{ left:-8%; top:-18%; width:118%; transition:left 1.15s cubic-bezier(.4,0,.2,1), top 1.15s cubic-bezier(.4,0,.2,1), width 1.15s cubic-bezier(.4,0,.2,1); }
+.app.vx-s1 .hero, .app.vx-s1 .watch, .app.vx-s1 .list, .app.vx-s1 .scrollbar,
+.app.vx-s2 .hero, .app.vx-s2 .watch, .app.vx-s2 .list, .app.vx-s2 .scrollbar,
+.app.vx-s3 .hero, .app.vx-s3 .watch, .app.vx-s3 .list, .app.vx-s3 .scrollbar{
+  opacity:0; pointer-events:none;
+}
+.app.vx-s2 .globe-wrap{ left:16%; top:calc(50% - 17vw); width:36%; }
+.app.vx-s3 .globe-wrap{ opacity:0; }
+.vx-modal{
+  position:absolute; left:50%; top:18%; transform:translateX(-50%);
+  width:min(380px, 34%); z-index:12; background:#fdfdfd; color:#1a2733;
+  padding:1.6vw 1.5vw 1.4vw; box-shadow:0 18px 50px rgba(0,16,40,.35);
+  opacity:0; pointer-events:none;
+}
+.vx-modal.show{ opacity:1; pointer-events:auto; }
+.vx-modal h2{ margin:0 0 1vw; font-size:1.3vw; letter-spacing:.12em; }
+.vx-modal label{ display:block; font-size:.7vw; font-weight:700; letter-spacing:.08em; color:#66727e; margin:.6vw 0 .2vw; }
+.vx-modal input{
+  width:100%; border:none; border-bottom:1px solid #c9d2dc; background:none;
+  font:inherit; font-size:.95vw; padding:.35vw 0; color:#1a2733; outline:none;
+}
+.vx-modal .vx-submit{
+  margin-top:1.1vw; width:100%; border:none; background:#0a4ea8; color:#fff;
+  font:inherit; font-weight:700; letter-spacing:.16em; padding:.7vw;
+}
+.vx-modal .vx-x{
+  position:absolute; right:.6vw; top:.4vw; border:none; background:none;
+  font-size:1.2vw; line-height:1; color:#1a2733; padding:.2vw .4vw;
+}
+.vx-drawer{
+  position:absolute; top:8%; right:4%; z-index:12; width:14vw; min-width:140px;
+  background:rgba(4,28,72,.92); color:#fff; padding:.6vw 0;
+  opacity:0; pointer-events:none;
+}
+.vx-drawer.show{ opacity:1; pointer-events:auto; }
+.vx-drawer button{
+  display:block; width:100%; text-align:left; background:none; border:none; color:#fff;
+  font:inherit; font-size:.78vw; font-weight:700; letter-spacing:.12em; padding:.55vw 1vw;
+}
+.vx-drawer button:hover{ background:rgba(255,255,255,.08); }
+.app.vx-s1 .globe, .app.vx-s2 .globe{ transition:transform .7s cubic-bezier(.4,0,.2,1); }
+
+.install-pop{
+  position:fixed; inset:0; z-index:40; display:none;
+  align-items:center; justify-content:center;
+  background:rgba(6,28,70,.28); padding:24px;
+}
+.install-pop.show{ display:flex; }
+.install-card{
+  width:min(820px, 96vw); background:#fff; color:#16181d;
+  border-radius:22px; padding:26px 26px 18px;
+  box-shadow:0 30px 70px rgba(0,16,40,.28);
+  font-family:'Quicksand',sans-serif;
+}
+.install-head{ display:flex; align-items:center; gap:14px; }
+.install-num{
+  width:42px; height:42px; border-radius:12px; background:#111; color:#fff;
+  display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px;
+}
+.install-head strong{ display:block; font-size:18px; letter-spacing:.01em; line-height:1.1; }
+.install-head small{ display:block; margin-top:2px; color:#9aa3ad; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+.scan-pill{
+  margin-left:auto; background:#e9f8ee; color:#178a3e; border-radius:999px;
+  font-size:11px; font-weight:800; letter-spacing:.08em; padding:7px 12px;
+}
+.install-grid{ display:grid; grid-template-columns:230px 1fr; gap:28px; margin-top:18px; align-items:start; }
+.install-grid canvas, #installQr{ width:196px; height:196px; display:block; background:#fff; }
+.scan-box{
+  margin-top:12px; border:1px solid #eceff3; border-radius:12px; padding:10px 12px 12px;
+}
+.scan-box b{ display:block; font-size:12px; letter-spacing:.08em; }
+.scan-box span, .scan-box small{ display:block; color:#8b939e; font-size:11px; font-weight:600; }
+.scan-box code{ display:block; margin-top:4px; font-size:11px; color:#243140; word-break:break-all; }
+.install-copy{ margin:0 0 12px; font-size:14px; line-height:1.45; color:#2a3340; font-weight:500; }
+.install-pills{ display:flex; gap:8px; margin-bottom:14px; }
+.install-pills div{
+  flex:1; background:#f3f5f2; border-radius:12px; text-align:center; padding:10px 4px 8px;
+}
+.install-pills b{ display:block; font-size:13px; letter-spacing:.04em; }
+.install-pills small{ display:block; margin-top:2px; color:#9aa3ad; font-size:10px; letter-spacing:.08em; }
+.install-label{ font-size:11px; letter-spacing:.12em; color:#9aa3ad; font-weight:700; margin:8px 0; }
+.btn-green{
+  width:100%; border:none; background:#1faa45; color:#fff; border-radius:12px;
+  font:inherit; font-weight:800; letter-spacing:.04em; padding:14px 14px; cursor:pointer;
+}
+.store-row{ display:flex; gap:10px; }
+.store-row button{
+  flex:1; background:#111; color:#fff; border:none; border-radius:12px;
+  font:inherit; font-weight:700; padding:12px 8px; cursor:pointer;
+}
+.install-foot{ margin:14px 0 10px; text-align:center; color:#9aa3ad; font-size:12px; font-weight:600; }
+.install-actions{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.btn-gray{
+  width:100%; border:none; background:#f2f3f5; color:#3a4450; border-radius:10px;
+  font:inherit; font-weight:700; letter-spacing:.06em; padding:12px 14px; cursor:pointer;
+}
+.verify{
+  position:fixed; inset:0; z-index:35; display:none;
+  align-items:center; justify-content:center; background:rgba(4,24,60,.35);
+}
+.verify.show{ display:flex; }
+.verify-card{
+  width:min(520px, 92vw); background:#fff; color:#16181d; border-radius:22px;
+  padding:26px; position:relative; font-family:'Quicksand',sans-serif;
+  box-shadow:0 30px 70px rgba(0,16,40,.28);
+}
+.verify-card h2{ margin:0 0 6px; font-size:22px; }
+.verify-card p{ margin:0 0 12px; color:#55616e; font-weight:600; }
+.verify-card video, .verify-card canvas.still{
+  width:100%; height:240px; background:#0c2744; border-radius:10px; object-fit:cover; display:none;
+}
+.verify-card video.on, .verify-card canvas.still.on{ display:block; }
+.face-stage{ position:relative; display:none; height:240px; border-radius:10px; overflow:hidden; background:#0c2744; }
+.face-stage.on{ display:block; }
+.face-stage canvas{ position:absolute; inset:0; width:100%; height:100%; }
+.face-result{ margin-top:10px; font-size:22px; font-weight:700; letter-spacing:.08em; display:none; }
+.face-result.show{ display:block; }
+.face-result.ok{ color:#1faa4a; }
+.face-result.no{ color:#e23b4a; }
+.verify-upload{
+  margin-top:8px; width:100%; border:1px solid #d5deea; background:#fff; color:#1a2733;
+  font:inherit; font-weight:700; letter-spacing:.06em; padding:10px; border-radius:10px; cursor:pointer;
+}
+.verify-meter{ height:8px; background:#e6eef5; border-radius:99px; overflow:hidden; display:none; margin-bottom:12px; }
+.verify-meter.on{ display:block; }
+.verify-meter i{ display:block; height:100%; width:0; background:#1faa4a; }
+.verify-go{
+  margin-top:12px; width:100%; border:none; background:#1faa45; color:#fff;
+  font:inherit; font-weight:800; letter-spacing:.04em; padding:14px; border-radius:12px; cursor:pointer;
+}
+@media (max-width:760px){
+  .install-grid{ grid-template-columns:1fr; }
+  .vx-bar{ left:4%; right:3%; top:2%; font-size:11px; }
+  .vx-link, .vx-search input{ font-size:11px; }
+  .hero{ left:6%; top:16%; width:88%; }
+  .hero h1{ font-size:12vw; }
+  .hero p{ font-size:3.4vw; }
+  .globe-wrap{ left:16%; top:38%; width:68%; }
+  .list{ left:58%; width:38%; top:22%; bottom:8%; }
+  .watch{ left:6%; top:auto; bottom:6%; width:46%; height:44px; }
+  .vx-brand{ font-size:12vw; }
+  .vx-digital{ font-size:7vw; }
+  .vx-mini{ width:7vw; height:7vw; }
+}
+.verify-x{
+  position:absolute; right:10px; top:8px; border:none; background:none;
+  font-size:22px; cursor:pointer; color:#1a2733;
+}
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cur"></div>
+
+<div class="app" id="app">
+
+  <div class="rail">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="#fff"><path d="M4 20c0-7 4.5-12.5 15-15-1 4.2-1.6 7.3-4 10.2C12.4 18.4 8.6 19.4 4 20Zm2.6-1.6c3.6-.7 6.4-1.7 8.3-4 1.6-2 2.2-4.1 2.8-6.6-7.6 2.4-10.3 6.6-11.1 10.6Z"/></svg>
+    </div>
+    <div class="socials">
+      <svg viewBox="0 0 24 24" fill="#fff"><path d="M12 2c2.7 0 3.1 0 4.1.1 1 .1 1.7.2 2.3.5.6.2 1.1.6 1.6 1.1.5.5.8.9 1.1 1.6.2.6.4 1.3.5 2.3.1 1 .1 1.4.1 4.1s0 3.1-.1 4.1c-.1 1-.2 1.7-.5 2.3a4.6 4.6 0 0 1-1.1 1.6 4.6 4.6 0 0 1-1.6 1.1c-.6.2-1.3.4-2.3.5-1 .1-1.4.1-4.1.1s-3.1 0-4.1-.1c-1-.1-1.7-.2-2.3-.5a4.6 4.6 0 0 1-1.6-1.1 4.6 4.6 0 0 1-1.1-1.6c-.2-.6-.4-1.3-.5-2.3C2 15.1 2 14.7 2 12s0-3.1.1-4.1c.1-1 .2-1.7.5-2.3.2-.6.6-1.1 1.1-1.6.5-.5.9-.8 1.6-1.1.6-.2 1.3-.4 2.3-.5C8.9 2 9.3 2 12 2Zm0 2.7c-2.6 0-2.9 0-4 .1-.8 0-1.3.2-1.6.3-.4.2-.7.3-1 .6-.3.3-.5.6-.6 1-.1.3-.3.8-.3 1.6-.1 1.1-.1 1.4-.1 4s0 2.9.1 4c0 .8.2 1.3.3 1.6.2.4.3.7.6 1 .3.3.6.5 1 .6.3.1.8.3 1.6.3 1.1.1 1.4.1 4 .1s2.9 0 4-.1c.8 0 1.3-.2 1.6-.3.4-.2.7-.3 1-.6.3-.3.5-.6.6-1 .1-.3.3-.8.3-1.6.1-1.1.1-1.4.1-4s0-2.9-.1-4c0-.8-.2-1.3-.3-1.6a2 2 0 0 0-.6-1 2 2 0 0 0-1-.6c-.3-.1-.8-.3-1.6-.3-1.1-.1-1.4-.1-4-.1Zm0 4.3a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm0 2.3a2.7 2.7 0 1 0 0 5.4 2.7 2.7 0 0 0 0-5.4Zm5.2-2.5a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4Z"/></svg>
+      <svg viewBox="0 0 24 24" fill="#fff"><path d="M22 5.9c-.7.3-1.5.6-2.3.7.8-.5 1.5-1.3 1.8-2.3-.8.5-1.7.8-2.6 1a4.1 4.1 0 0 0-7 3.7A11.6 11.6 0 0 1 3.4 4.6a4.1 4.1 0 0 0 1.3 5.5c-.6 0-1.3-.2-1.8-.5v.1c0 2 1.4 3.6 3.3 4a4.2 4.2 0 0 1-1.9.1 4.1 4.1 0 0 0 3.9 2.9A8.3 8.3 0 0 1 2 18.4a11.6 11.6 0 0 0 6.3 1.9c7.5 0 11.7-6.4 11.7-11.9v-.5c.8-.6 1.5-1.3 2-2Z"/></svg>
+      <svg viewBox="0 0 24 24" fill="#fff"><path d="M13.5 21v-7.7h2.6l.4-3h-3V8.3c0-.9.2-1.5 1.6-1.5h1.6V4.1C15.9 4 15 4 13.9 4c-2.3 0-3.9 1.4-3.9 4v2.3H7.4v3h2.6V21h3.5Z"/></svg>
+    </div>
+  </div>
+
+  <nav class="nav"><a href="#">About</a><a href="#">Contact</a></nav>
+
+  <div class="vx-stars"></div>
+  <div class="vx-bar">
+    <button class="vx-logo vx-hit" id="vxHome" type="button" aria-label="Hakika home">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><path fill="#7ee7ff" d="M16 4a10 10 0 1 0 8.6 15.1 8.2 8.2 0 1 1 0-10.2A10 10 0 0 0 16 4z"/><circle cx="23.2" cy="8.2" r="1.5" fill="#fff"/></svg>
+      HAKIKA
+    </button>
+    <span class="vx-spacer"></span>
+    <button class="vx-link vx-hit" id="vxLogin" type="button">AGENT</button>
+    <button class="vx-link vx-hit" id="vxSignup" type="button">SUBSCRIBER</button>
+    <label class="vx-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="11" cy="11" r="6"/><path d="M16 16l5 5"/></svg>
+      <input id="vxFind" type="search" placeholder="SEARCH" aria-label="Search places">
+    </label>
+    <button class="vx-menu vx-hit" id="vxMenu" type="button" aria-label="Menu"><i></i><i></i><i></i></button>
+  </div>
+  <div class="vx-dots" id="vxDots">
+    <button class="vx-dot vx-hit on" type="button" data-step="0" aria-label="Register the line"></button>
+    <button class="vx-dot vx-hit" type="button" data-step="1" aria-label="Explore your world"></button>
+    <button class="vx-dot vx-hit" type="button" data-step="2" aria-label="Destinations"></button>
+    <button class="vx-dot vx-hit" type="button" data-step="3" aria-label="Book"></button>
+  </div>
+  <div class="vx-world" aria-hidden="true">
+    <div class="vx-brand"><span>H</span><span class="vx-mini"><canvas id="miniA" width="128" height="128"></canvas></span><span>kik</span><span class="vx-mini"><canvas id="miniB" width="128" height="128"></canvas></span></div>
+    <p class="vx-digital">Digital ID</p>
+  </div>
+  <h2 class="vx-country" id="vxCountry">EQUATOR</h2>
+  <div class="vx-dest"><ol id="vxPlaces"></ol></div>
+  <div class="vx-stage" id="vxStage">
+    <img id="vxPhoto" alt="">
+    <div class="vx-shade"></div>
+    <div class="vx-hero-title"><small id="vxCountrySm">EQUATOR</small><strong id="vxPlaceName">USSD MENU</strong></div>
+    <form class="vx-book" id="vxBook">
+      <div class="vx-field"><label>ID number</label><input name="in" placeholder="ID NUMBER" inputmode="numeric"></div>
+      <div class="vx-field"><label>Phone</label><input name="out" placeholder="07XX XXX XXX" inputmode="tel"></div>
+      <div class="vx-field"><label>SIM serial</label><div class="vx-adults"><button type="button" id="vxMinus" aria-label="Previous serial digit">–</button><b id="vxAdults">1</b><button type="button" id="vxPlus" aria-label="Next serial digit">+</button></div></div>
+      <button class="vx-go vx-hit" type="submit" aria-label="Request booking"><svg viewBox="0 0 24 24"><path d="M5 12h12M13 6l6 6-6 6"/></svg></button>
+    </form>
+    <div class="vx-note" id="vxNote">LINE SUBMITTED</div>
+  </div>
+  <div class="vx-modal" id="vxModal">
+    <button class="vx-x vx-hit" id="vxModalX" type="button" aria-label="Close">×</button>
+    <h2 id="vxModalTitle">AGENT</h2>
+    <form id="vxAuth">
+      <label>EMAIL</label><input name="email" type="email" autocomplete="username">
+      <label>PASSWORD</label><input name="password" type="password" autocomplete="current-password">
+      <button class="vx-submit vx-hit" type="submit">CONTINUE</button>
+    </form>
+  </div>
+  <div class="vx-drawer" id="vxDrawer">
+    <button class="vx-hit" type="button" data-step="0">REGISTER THE LINE</button>
+    <button class="vx-hit" type="button" data-step="2">DESTINATIONS</button>
+    <button class="vx-hit" type="button" data-step="3">BOOK</button>
+    <button class="vx-hit" type="button" id="vxInstall">INSTALL</button>
+  </div>
+
+  <div class="globe-wrap" id="globeWrap">
+    <div class="vx-flare"></div>
+    <div class="globe" id="globeMount"></div>
+    <div class="cloud c1"></div>
+    <div class="cloud c2"></div>
+    <div class="cloud c3"></div>
+  </div>
+  <div class="pin"></div>
+
+  <div class="hero" id="hero">
+    <h1>Register the<br>line</h1>
+    <p>SIM registration still fails for people who only have USSD. Paper KYC and smartphone-only checks leave rural lines unregistered.</p>
+  </div>
+
+  <button class="watch" id="watch">
+    <span>SEE THE FLOW</span>
+    <span class="play"><svg viewBox="0 0 10 10"><path d="M2 1l6 4-6 4z"/></svg></span>
+  </button>
+
+  <div class="list" id="list"><div class="track" id="track"></div></div>
+  <div class="scrollbar" id="sb"><i id="sbThumb"></i></div>
+
+  <div class="detail">
+    <button class="back" id="back">
+      <svg viewBox="0 0 36 22" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M34 11H3M11 3L3 11l8 8"/>
+      </svg>
+    </button>
+    <h1 id="dTitle">Register the<br>line</h1>
+    <span class="campaign" id="dCampaign">USSD + SMS</span>
+    <div class="panel" id="panel">
+      <div class="copy" id="dCopy"></div>
+      <div class="shot" id="dShot"><img id="dImg" alt=""></div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* =====================================================================
+   GLOBE
+   The reference earth has NO night side: it reads as uniformly lit with a
+   bright cyan-white rim wrapping the lower-left limb. That is reproduced
+   with: white ambient + a near-camera key light + an emissiveMap lift, and
+   an additive fresnel shell for the halo. A plain directional/phong rig
+   (which is what produced the dark globe) is deliberately avoided.
+   ===================================================================== */
+(function(){
+  'use strict';
+  var mount = document.getElementById('globeMount');
+  if(!window.THREE || !mount) return;
+
+  var R = 2;
+  var scene  = new THREE.Scene();
+  var camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+  camera.position.set(0, 0.1, 7.3);
+
+  var renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  mount.appendChild(renderer.domElement);
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.72));
+  var key = new THREE.DirectionalLight(0xffffff, 0.9);
+  key.position.set(1.2, 0.9, 4.0);          // almost head-on: kills the terminator
+  scene.add(key);
+  var rim = new THREE.DirectionalLight(0xbfe9ff, 0.42);
+  rim.position.set(-3.2, -2.0, 1.2);        // the cool lower-left limb wrap
+  scene.add(rim);
+  scene.add(new THREE.HemisphereLight(0xdff4ff, 0x2f8fd6, 0.28));
+  if(THREE.sRGBEncoding) renderer.outputEncoding = THREE.sRGBEncoding;
+
+  var tilt = new THREE.Group();
+  tilt.rotation.z = -16 * Math.PI/180;
+  tilt.rotation.x =   5 * Math.PI/180;
+  scene.add(tilt);
+  var spin = new THREE.Group();
+  spin.rotation.y = 2.45;                   // opens on the Americas, as in frame 0
+  tilt.add(spin);
+
+  function fallbackTexture(){
+    var c = document.createElement('canvas');
+    c.width = 1024; c.height = 512;
+    var x = c.getContext('2d');
+    var g = x.createLinearGradient(0,0,0,512);
+    g.addColorStop(0,'#28658f'); g.addColorStop(.5,'#245e88'); g.addColorStop(1,'#1f5378');
+    x.fillStyle = g; x.fillRect(0,0,1024,512);
+    // greens sampled from the reference: #185f2a / #2b7c47 / #3f8e56
+    var land = [
+      [232,150,46,60,'#2b7c47'],[248,196,26,40,'#3f8e56'],[268,250,30,58,'#2b7c47'],
+      [286,318,20,46,'#185f2a'],[200,128,30,26,'#3f8e56'],[176,96,22,16,'#e9f4f8'],
+      [506,132,40,30,'#2b7c47'],[534,186,34,44,'#185f2a'],[556,252,26,40,'#3f8e56'],
+      [596,140,44,34,'#2b7c47'],[646,158,54,40,'#3f8e56'],[700,200,40,34,'#2b7c47'],
+      [740,150,46,32,'#3f8e56'],[812,270,40,44,'#2b7c47'],[856,330,34,30,'#185f2a'],
+      [640,110,36,22,'#3f8e56'],[420,180,16,14,'#2b7c47']
+    ];
+    land.forEach(function(b){
+      x.fillStyle = b[4]; x.beginPath();
+      x.ellipse(b[0],b[1],b[2],b[3],0,0,Math.PI*2); x.fill();
+    });
+    x.fillStyle = 'rgba(236,246,251,.85)';
+    x.fillRect(0,0,1024,18); x.fillRect(0,494,1024,18);
+    return new THREE.CanvasTexture(c);
+  }
+
+  var mat = new THREE.MeshPhongMaterial({
+    shininess:14, specular:0x3a7eb8,
+    emissive:0xffffff, emissiveIntensity:0.0
+  });
+  spin.add(new THREE.Mesh(new THREE.SphereGeometry(R, 72, 72), mat));
+
+  function brightenTexture(img){
+    var maxW = 2048, w = img.width, h = img.height;
+    if(w > maxW){ h = Math.round(h * maxW / w); w = maxW; }
+    var c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    var x = c.getContext('2d');
+    x.filter = 'brightness(1.2) saturate(1.38) contrast(1.08)';
+    x.drawImage(img, 0, 0, w, h);
+    var tex = new THREE.CanvasTexture(c);
+    if(THREE.sRGBEncoding) tex.encoding = THREE.sRGBEncoding;
+    tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    return tex;
+  }
+  function applyTexture(tex){
+    mat.map = tex;
+    mat.emissiveMap = tex;
+    mat.emissiveIntensity = 0.2;
+    mat.needsUpdate = true;
+  }
+  applyTexture(fallbackTexture());          // never render a blank sphere
+  var TILES = [
+    'https://cdn.jsdelivr.net/npm/three-globe@2.31.1/example/img/earth-blue-marble.jpg',
+    'https://raw.githubusercontent.com/IanDev-cmd/Guardians-of-the-Ocean/main/assets/3d/earth-atmos.jpg',
+    'https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg'
+  ];
+  function loadTile(i){
+    if(i >= TILES.length) return;
+    var img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function(){ applyTexture(brightenTexture(img)); };
+    img.onerror = function(){ loadTile(i + 1); };
+    img.src = TILES[i];
+  }
+  loadTile(0);
+
+  function latLonVec(lat, lng, r){
+    var phi = (90 - lat) * Math.PI / 180;
+    var theta = (lng + 180) * Math.PI / 180;
+    return new THREE.Vector3(
+      -r * Math.sin(phi) * Math.cos(theta),
+      r * Math.cos(phi),
+      r * Math.sin(phi) * Math.sin(theta)
+    );
+  }
+  var dot = document.createElement('canvas');
+  dot.width = dot.height = 64;
+  var dx = dot.getContext('2d');
+  var dg = dx.createRadialGradient(32,32,4,32,32,30);
+  dg.addColorStop(0,'rgba(255,45,130,1)');
+  dg.addColorStop(0.45,'rgba(255,45,130,.55)');
+  dg.addColorStop(1,'rgba(255,45,130,0)');
+  dx.fillStyle = dg; dx.fillRect(0,0,64,64);
+  var mark = new THREE.Sprite(new THREE.SpriteMaterial({
+    map:new THREE.CanvasTexture(dot), transparent:true, depthWrite:false
+  }));
+  mark.scale.set(0.55, 0.55, 1);
+  mark.visible = false;
+  spin.add(mark);
+  window.__markPlace = function(lat, lng){
+    mark.position.copy(latLonVec(lat, lng, R * 1.02));
+    mark.visible = true;
+    window.__globeAim = { y: -(lng) * Math.PI / 180 + Math.PI * 0.5 };
+  };
+  window.__clearMark = function(){ mark.visible = false; window.__globeAim = null; };
+  window.__projectLatLng = function(lat, lng){
+    spin.updateMatrixWorld(true);
+    var world = latLonVec(lat, lng, R * 1.01).applyMatrix4(spin.matrixWorld);
+    var facing = world.clone().normalize().dot(camera.position.clone().normalize()) > 0.18;
+    var p = world.project(camera);
+    var rect = mount.getBoundingClientRect();
+    return {
+      x: rect.left + (p.x * 0.5 + 0.5) * rect.width,
+      y: rect.top + (-p.y * 0.5 + 0.5) * rect.height,
+      facing: facing && p.z > -1 && p.z < 1
+    };
+  };
+
+  // additive fresnel halo — the luminous edge the reference has
+  var fres = new THREE.ShaderMaterial({
+    uniforms:{ c:{value:0.1}, p:{value:5.2}, glow:{value:new THREE.Color(0xa8e4ff)} },
+    vertexShader:
+      'varying vec3 vN; varying vec3 vP;' +
+      'void main(){ vN = normalize(normalMatrix * normal);' +
+      ' vec4 mv = modelViewMatrix * vec4(position,1.0); vP = normalize(-mv.xyz);' +
+      ' gl_Position = projectionMatrix * mv; }',
+    fragmentShader:
+      'uniform float c; uniform float p; uniform vec3 glow;' +
+      'varying vec3 vN; varying vec3 vP;' +
+      'void main(){ float i = pow(c - dot(vN, vP), p);' +
+      ' gl_FragColor = vec4(glow, 1.0) * clamp(i, 0.0, 1.0) * 0.55; }',
+    side:THREE.BackSide, blending:THREE.AdditiveBlending,
+    transparent:true, depthWrite:false
+  });
+  spin.add(new THREE.Mesh(new THREE.SphereGeometry(R*1.15, 56, 56), fres));
+
+  var lw=0, lh=0;
+  function sync(){
+    var w = mount.clientWidth, h = mount.clientHeight;
+    if(w>0 && h>0 && (w!==lw || h!==lh)){
+      lw=w; lh=h;
+      renderer.setSize(w,h,false);
+      camera.aspect = w/h; camera.updateProjectionMatrix();
+    }
+  }
+  window.__spin = spin;
+  (function loop(){
+    requestAnimationFrame(loop);
+    sync();
+    if(window.__globeAim){
+      var aim = window.__globeAim;
+      var dy = aim.y - spin.rotation.y;
+      while(dy > Math.PI) dy -= Math.PI * 2;
+      while(dy < -Math.PI) dy += Math.PI * 2;
+      spin.rotation.y += dy * 0.06;
+      if(Math.abs(dy) < 0.012) window.__globeAim = null;
+    } else if(window.__globeDrag){
+      spin.rotation.y += window.__globeDrag.y;
+      tilt.rotation.x += window.__globeDrag.x;
+      tilt.rotation.x = Math.max(-0.6, Math.min(0.6, tilt.rotation.x));
+      window.__globeDrag.y = 0;
+      window.__globeDrag.x = 0;
+    } else if(!window.__globeHold){
+      spin.rotation.y += 0.0019 + (window.__spinBoost || 0);
+    }
+    renderer.render(scene, camera);
+  })();
+})();
+</script>
+
+<script>
+(function(){
+'use strict';
+
+/* Card imagery. Every entry has a CSS gradient underneath and an onerror
+   handler, so a dead URL degrades to something intentional rather than a
+   broken box. The kingfisher is the actual photo used in the reference. */
+var W = 'https://commons.wikimedia.org/wiki/Special:FilePath/';
+var CARDS = [
+  { id:'face', l1:'Face', l2:'verification', sensor:'face', lat:-1.29, lng:36.82,
+    img: 'hakika-photos/hakika-face.png',
+    fall:'linear-gradient(170deg,#3fc4e8,#0b6ba8 60%,#07406e)',
+    campaign:null,
+    text:"The phone camera matches the subscriber’s face to the ID on file. Hakika asks for the camera only when this card is opened." },
+
+  { id:'voice', l1:'Voice', l2:'verification', sensor:'voice', lat:0.51, lng:35.27,
+    img: 'hakika-photos/hakika-voice.png',
+    fall:'linear-gradient(170deg,#d9c3a6 0%,#8d6a45 55%,#3d2a1c 100%)',
+    campaign:null,
+    text:"The phone microphone takes a short voice sample. Hakika asks for the microphone only when this card is opened." },
+
+  { id:'finger', l1:'Biometric', l2:'verification', sensor:'finger', lat:0.35, lng:32.58,
+    img: 'hakika-photos/hakika-finger.png',
+    fall:'linear-gradient(165deg,#1c2430 0%,#0e1622 55%,#070d16 100%)',
+    campaign:'USSD + SMS',
+    text:"The phone finger scanner confirms the subscriber through the device biometric. Hakika uses the platform authenticator, not a stored fingerprint image." },
+
+  { id:'sms', l1:'SMS', l2:'receipt', lat:0.52, lng:25.19,
+    img: 'hakika-photos/hakika-sms.png',
+    fall:'linear-gradient(165deg,#123a62 0%,#0c6ea8 45%,#071a33 100%)',
+    campaign:null,
+    text:"When the line is accepted, or held, the result arrives as an SMS. The subscriber does not need a data connection to know the registration state." },
+
+  { id:'agent', l1:'Agent', l2:'desk', lat:0.42, lng:9.47,
+    img: 'hakika-photos/hakika-agent.png',
+    fall:'linear-gradient(160deg,#e7d7b8,#b08a52 60%,#5c4528)',
+    campaign:null,
+    text:"Shop agents register lines for people who cannot self-serve. Float, commission, and the day’s registrations stay on the same USSD menu the agent already uses." },
+
+  { id:'rural', l1:'Rural', l2:'line', lat:0.34, lng:6.73,
+    img: 'hakika-photos/hakika-rural.png',
+    fall:'linear-gradient(170deg,#f2c489 0%,#b8803f 38%,#5a4526 72%,#2c2415 100%)',
+    campaign:null,
+    text:"The same plugin serves a roadside kiosk on the equator. Low-literacy prompts stay short, and a voice fallback can read the USSD steps aloud." }
+];
+
+var app    = document.getElementById('app');
+var track  = document.getElementById('track');
+var list   = document.getElementById('list');
+var sbThumb= document.getElementById('sbThumb');
+var dTitle = document.getElementById('dTitle');
+var dCopy  = document.getElementById('dCopy');
+var dImg   = document.getElementById('dImg');
+var dShot  = document.getElementById('dShot');
+var dCamp  = document.getElementById('dCampaign');
+var globe  = document.getElementById('globeMount');
+
+/* ---------------------------------------------------------------- cursor */
+var cur = document.getElementById('cur');
+var cx = innerWidth/2, cy = innerHeight/2, tx = cx, ty = cy;
+addEventListener('pointermove', function(e){
+  tx = e.clientX; ty = e.clientY;
+  if(!dragOn) return;
+  var dx = e.clientX - dragX, dy = e.clientY - dragY;
+  dragX = e.clientX; dragY = e.clientY;
+  window.__globeDrag = { y: dx * 0.008, x: dy * 0.005 };
+}, {passive:true});
+addEventListener('pointerup', function(){ dragOn = false; });
+addEventListener('pointercancel', function(){ dragOn = false; });
+(function follow(){
+  cx += (tx-cx)*0.22; cy += (ty-cy)*0.22;
+  cur.style.transform = 'translate(' + cx.toFixed(1) + 'px,' + cy.toFixed(1) + 'px)';
+  requestAnimationFrame(follow);
+})();
+var dragOn = false, dragX = 0, dragY = 0;
+addEventListener('pointerdown', function(e){
+  var blocked = e.target.closest && e.target.closest('button,a,input,textarea,.card,.vx-book,.install-card,.verify-card');
+  if(!blocked){
+    dragOn = true;
+    dragX = e.clientX;
+    dragY = e.clientY;
+    window.__globeAim = null;
+    window.__globeDrag = { x:0, y:0 };
+  }
+  var r = document.createElement('div');
+  r.className = 'ripple';
+  r.style.transform = 'translate(' + e.clientX + 'px,' + e.clientY + 'px)';
+  document.body.appendChild(r);
+  setTimeout(function(){ r.remove(); }, 640);
+}, {passive:true});
+document.addEventListener('pointerover', function(e){
+  cur.classList.toggle('hot', !!(e.target.closest && e.target.closest('.card,.watch,.back,.nav a,.vx-hit')));
+});
+
+/* ------------------------------------------------------------- card list */
+var moved = false;
+function buildCard(c){
+  var b = document.createElement('button');
+  b.className = 'card';
+  b.type = 'button';
+  b.dataset.id = c.id;
+  b.innerHTML =
+    '<div class="shot" style="background:' + c.fall + '">' +
+      (c.img ? '<img src="' + c.img + '" alt="" loading="lazy">' : '') +
+    '</div>' +
+    '<span class="cap">' + c.l1 + '<br>' + c.l2 + '</span>';
+  var im = b.querySelector('img');
+  if(im) im.addEventListener('error', function(){ im.remove(); });
+  b.addEventListener('click', function(){
+    if(moved){ moved = false; return; }
+    if(c.sensor && window.__verify){ window.__verify(c); return; }
+    open(c, b);
+  });
+  return b;
+}
+
+function sizeCards(){
+  // card height is 15.1% of the frame, gap 1.36%
+  var h = innerHeight * 0.151;
+  var g = innerHeight * 0.0136;
+  [].forEach.call(track.querySelectorAll('.card'), function(el){
+    el.style.height = h + 'px';
+    el.style.marginBottom = g + 'px';
+  });
+  return h + g;
+}
+
+CARDS.forEach(function(c){ track.appendChild(buildCard(c)); });
+CARDS.forEach(function(c){ track.appendChild(buildCard(c)); });  // seamless loop
+
+var pitch = sizeCards();
+var loopLen = pitch * CARDS.length;
+addEventListener('resize', function(){ pitch = sizeCards(); loopLen = pitch * CARDS.length; });
+
+var off = 0, vel = 0, drift = 0.22, dragging = false, lastY = 0, boost = 0;
+function render(){
+  if(!dragging){ off += drift + vel; vel *= 0.93; }
+  if(off >= loopLen) off -= loopLen;
+  if(off < 0) off += loopLen;
+  track.style.transform = 'translate3d(0,' + (-off).toFixed(2) + 'px,0)';
+
+  var p = (off % loopLen) / loopLen;
+  var trackH = list.parentNode ? document.getElementById('sb').clientHeight : 0;
+  sbThumb.style.transform = 'translateY(' + (p * trackH * 0.78).toFixed(1) + 'px)';
+
+  // the globe visibly scales up while the list moves (frame 0 vs frame 90)
+  var speed = Math.min(Math.abs(drift + vel) / 6, 1);
+  boost += (speed - boost) * 0.06;
+  document.getElementById('globeWrap').querySelector('.globe')
+    .style.setProperty('--gscale', (1 + boost * 0.10).toFixed(4));
+  window.__spinBoost = boost * 0.004;
+
+  requestAnimationFrame(render);
+}
+render();
+
+list.addEventListener('wheel', function(e){
+  e.preventDefault();
+  vel += e.deltaY * 0.06;
+  vel = Math.max(-26, Math.min(26, vel));
+}, {passive:false});
+
+var downY = 0, armed = false;
+list.addEventListener('pointerdown', function(e){
+  armed = true; moved = false; downY = lastY = e.clientY;
+});
+list.addEventListener('pointermove', function(e){
+  if(!armed) return;
+  if(!dragging && Math.abs(e.clientY - downY) > 4){ dragging = true; moved = true; }
+  if(!dragging) return;
+  var d = e.clientY - lastY; lastY = e.clientY;
+  off -= d; vel = -d * 0.5;
+});
+['pointerup','pointercancel','pointerleave'].forEach(function(t){
+  list.addEventListener(t, function(){ armed = false; dragging = false; });
+});
+
+/* -------------------------------------------------- detail + FLIP motion */
+var openState = false;
+
+function open(c, cardEl){
+  if(openState) return;
+  openState = true;
+
+  dTitle.innerHTML = c.l1 + '<br>' + c.l2;
+  dCopy.textContent = c.text;
+  dShot.style.background = c.fall;
+  if(c.img){ dImg.src = c.img; dImg.style.display = ''; }
+  else { dImg.removeAttribute('src'); dImg.style.display = 'none'; }
+  dCamp.textContent = c.campaign || '';
+  dCamp.style.display = c.campaign ? '' : 'none';
+
+  var from  = cardEl.querySelector('.shot').getBoundingClientRect();
+  var fromT = cardEl.querySelector('.cap').getBoundingClientRect();
+
+  app.classList.add('detail');
+
+  // measure targets after the class flip, then run the FLIP
+  requestAnimationFrame(function(){
+    var to  = dShot.getBoundingClientRect();
+    var toT = dTitle.getBoundingClientRect();
+
+    var fly = document.createElement('div');
+    fly.className = 'flyer';
+    fly.style.cssText =
+      'left:' + from.left + 'px;top:' + from.top + 'px;' +
+      'width:' + from.width + 'px;height:' + from.height + 'px;' +
+      'background:' + c.fall + ';';
+    if(c.img) fly.innerHTML = '<img src="' + c.img + '" alt="">';
+    document.body.appendChild(fly);
+
+    var ft = document.createElement('div');
+    ft.className = 'flytitle';
+    ft.innerHTML = c.l1 + '<br>' + c.l2;
+    ft.style.cssText =
+      'left:' + fromT.left + 'px;top:' + fromT.top + 'px;' +
+      'font-size:' + getComputedStyle(cardEl.querySelector('.cap')).fontSize + ';';
+    document.body.appendChild(ft);
+
+    var titleScale = toT.width && fromT.width
+      ? parseFloat(getComputedStyle(dTitle).fontSize) /
+        parseFloat(getComputedStyle(cardEl.querySelector('.cap')).fontSize)
+      : 1;
+
+    fly.animate([
+      { transform:'translate(0,0)', width:from.width + 'px', height:from.height + 'px' },
+      { transform:'translate(' + (to.left - from.left) + 'px,' + (to.top - from.top) + 'px)',
+        width:to.width + 'px', height:to.height + 'px' }
+    ], { duration:900, easing:'cubic-bezier(.66,0,.2,1)', fill:'forwards' });
+
+    ft.animate([
+      { transform:'translate(0,0) scale(1)' },
+      { transform:'translate(' + (toT.left - fromT.left) + 'px,' + (toT.top - fromT.top) + 'px) scale(' + titleScale + ')' }
+    ], { duration:900, easing:'cubic-bezier(.66,0,.2,1)', fill:'forwards' });
+
+    setTimeout(function(){
+      dTitle.style.opacity = '1';
+      fly.remove(); ft.remove();
+    }, 880);
+  });
+}
+
+function close(){
+  if(!openState) return;
+  openState = false;
+  dTitle.style.opacity = '0';
+  app.classList.remove('detail');
+}
+document.getElementById('back').addEventListener('click', close);
+addEventListener('keydown', function(e){ if(e.key === 'Escape') close(); });
+
+})();
+</script>
+
+<script>
+(function(){
+'use strict';
+var PW = 'https://commons.wikimedia.org/wiki/Special:FilePath/';
+var PLACES = [
+  { id:'ussd', name:'USSD MENU', country:'NAIROBI', lat:-1.29, lng:36.82,
+    img: 'hakika-photos/hakika-ussd.png',
+    fall:'linear-gradient(180deg,#1c2430,#0e1622 55%,#070d16)' },
+  { id:'agent', name:'AGENT DESK', country:'KAMPALA', lat:0.35, lng:32.58,
+    img: 'hakika-photos/hakika-agent.png',
+    fall:'linear-gradient(180deg,#e7d7b8,#b08a52 48%,#3a2a16)' },
+  { id:'idface', name:'ID AND FACE', country:'ELDORET', lat:0.51, lng:35.27,
+    img: 'hakika-photos/hakika-id.png',
+    fall:'linear-gradient(180deg,#d9c3a6,#8d6a45 50%,#2c1c12)' },
+  { id:'sms', name:'SMS RESULT', country:'KISANGANI', lat:0.52, lng:25.19,
+    img: 'hakika-photos/hakika-sms.png',
+    fall:'linear-gradient(180deg,#8ec4e8,#0c6ea8 50%,#071a33)' },
+  { id:'live', name:'LINE LIVE', country:'LIBREVILLE', lat:0.42, lng:9.47,
+    img: 'hakika-photos/hakika-live.png',
+    fall:'linear-gradient(180deg,#9eb0bc,#1f6b4a 55%,#10241c)' }
+];
+var app = document.getElementById('app');
+var list = document.getElementById('vxPlaces');
+var photo = document.getElementById('vxPhoto');
+var stage = document.getElementById('vxStage');
+var country = document.getElementById('vxCountry');
+var countrySm = document.getElementById('vxCountrySm');
+var placeName = document.getElementById('vxPlaceName');
+var note = document.getElementById('vxNote');
+var adultsEl = document.getElementById('vxAdults');
+var modal = document.getElementById('vxModal');
+var drawer = document.getElementById('vxDrawer');
+var adults = 1, step = 0, current = PLACES[1], zoomTimer = 0;
+
+PLACES.forEach(function(p, i){
+  var li = document.createElement('li');
+  li.className = 'vx-item' + (i === 0 ? ' open' : '');
+  var b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'vx-row vx-hit';
+  b.textContent = p.name;
+  b.addEventListener('click', function(){ expandPlace(p); });
+  var shot = document.createElement('div');
+  shot.className = 'vx-shot';
+  shot.style.background = p.fall;
+  var im = document.createElement('img');
+  im.alt = '';
+  im.src = p.img;
+  im.addEventListener('error', function(){ im.remove(); });
+  var go = document.createElement('button');
+  go.type = 'button';
+  go.className = 'vx-explore vx-hit';
+  go.textContent = 'REGISTER';
+  go.addEventListener('click', function(ev){ ev.stopPropagation(); openPlace(p); });
+  shot.appendChild(im);
+  shot.appendChild(go);
+  li.appendChild(b);
+  li.appendChild(shot);
+  list.appendChild(li);
+  p.btn = b;
+  p.li = li;
+});
+current = PLACES[0];
+
+function setStep(n){
+  step = n;
+  app.classList.remove('vx-s1','vx-s2','vx-s3','vx-zoom');
+  if(n === 1) app.classList.add('vx-s1');
+  if(n === 2) app.classList.add('vx-s2');
+  if(n === 3) app.classList.add('vx-s3');
+  window.__globeHold = n === 2 || n === 3;
+  if(n !== 2 && n !== 3 && window.__clearMark) window.__clearMark();
+  [].forEach.call(document.querySelectorAll('.vx-dot'), function(d){
+    d.classList.toggle('on', Number(d.dataset.step) === n);
+  });
+  if(app.classList.contains('detail') && n !== 0){
+    app.classList.remove('detail');
+    document.getElementById('dTitle').style.opacity = '0';
+  }
+  drawer.classList.remove('show');
+  if(n === 2 && window.__markPlace) window.__markPlace(current.lat, current.lng);
+  if(n === 3) fillStage(current);
+}
+function playShrink(){
+  var g = document.querySelector('.globe');
+  g.style.transition = 'transform .7s cubic-bezier(.4,0,.2,1)';
+  g.style.transform = 'scale(.18)';
+  setTimeout(function(){ if(step === 1) g.style.transform = 'scale(1)'; }, 760);
+  setTimeout(function(){ if(step === 1){ g.style.transition = ''; g.style.transform = ''; } }, 1500);
+}
+function fillStage(p){
+  current = p;
+  country.textContent = p.country;
+  countrySm.textContent = p.country;
+  placeName.textContent = p.name;
+  stage.style.background = p.fall;
+  photo.src = p.img || '';
+  photo.onerror = function(){ photo.removeAttribute('src'); };
+  note.classList.remove('show');
+  PLACES.forEach(function(o){ if(o.li) o.li.classList.toggle('open', o === p); });
+}
+function expandPlace(p){
+  current = p;
+  country.textContent = p.country;
+  PLACES.forEach(function(o){ if(o.li) o.li.classList.toggle('open', o === p); });
+  if(step !== 2) setStep(2);
+  if(window.__markPlace) window.__markPlace(p.lat, p.lng);
+}
+function openPlace(p){
+  fillStage(p);
+  if(window.__markPlace) window.__markPlace(p.lat, p.lng);
+  if(step !== 2) setStep(2);
+  app.classList.add('vx-zoom');
+  window.__globeHold = true;
+  clearTimeout(zoomTimer);
+  zoomTimer = setTimeout(function(){
+    app.classList.remove('vx-zoom');
+    setStep(3);
+  }, 1200);
+}
+var landTimer = 0;
+function paintMinis(){
+  if(!app.classList.contains('vx-s1')) return;
+  var src = document.querySelector('#globeMount canvas');
+  if(!src) return;
+  ['miniA','miniB'].forEach(function(id){
+    var c = document.getElementById(id);
+    var ctx = c.getContext('2d');
+    var s = c.width;
+    ctx.clearRect(0, 0, s, s);
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(s/2, s/2, s/2 - 1, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(src, 0, 0, s, s);
+    ctx.restore();
+  });
+}
+(function miniLoop(){ requestAnimationFrame(miniLoop); paintMinis(); })();
+function playLanding(){
+  setStep(1);
+  clearTimeout(landTimer);
+  landTimer = setTimeout(function(){ if(step === 1) setStep(0); }, 2800);
+}
+window.__playLanding = playLanding;
+playLanding();
+document.getElementById('vxDots').addEventListener('click', function(e){
+  var b = e.target.closest('.vx-dot');
+  if(!b) return;
+  var n = Number(b.dataset.step);
+  if(n === 1){ playLanding(); return; }
+  if(n === 3) fillStage(current);
+  setStep(n);
+});
+document.getElementById('vxDrawer').addEventListener('click', function(e){
+  var b = e.target.closest('button');
+  if(!b || b.id === 'vxInstall') return;
+  var n = Number(b.dataset.step);
+  if(n === 3) fillStage(current);
+  setStep(n);
+});
+document.getElementById('vxHome').addEventListener('click', function(){ setStep(0); });
+document.getElementById('vxMenu').addEventListener('click', function(){ drawer.classList.toggle('show'); });
+function openModal(title){
+  document.getElementById('vxModalTitle').textContent = title;
+  modal.classList.add('show');
+  drawer.classList.remove('show');
+}
+document.getElementById('vxLogin').addEventListener('click', function(){ openModal('AGENT'); });
+document.getElementById('vxSignup').addEventListener('click', function(){ openModal('SUBSCRIBER'); });
+document.getElementById('vxModalX').addEventListener('click', function(){ modal.classList.remove('show'); });
+document.getElementById('vxAuth').addEventListener('submit', function(e){
+  e.preventDefault();
+  var email = (new FormData(e.target).get('email') || '').toString();
+  var who = email.split('@')[0];
+  if(who) document.getElementById('vxLogin').textContent = who.toUpperCase();
+  modal.classList.remove('show');
+});
+document.getElementById('vxFind').addEventListener('input', function(e){
+  var q = e.target.value.trim().toLowerCase();
+  PLACES.forEach(function(p){
+    p.li.style.display = !q || p.name.toLowerCase().indexOf(q) >= 0 ? '' : 'none';
+  });
+  [].forEach.call(document.querySelectorAll('.card'), function(card){
+    var t = card.textContent.toLowerCase();
+    card.style.display = !q || t.indexOf(q) >= 0 ? '' : 'none';
+  });
+  if(q && step === 0) setStep(2);
+});
+document.getElementById('vxMinus').addEventListener('click', function(){
+  adults = Math.max(1, adults - 1); adultsEl.textContent = String(adults);
+});
+document.getElementById('vxPlus').addEventListener('click', function(){
+  adults = Math.min(9, adults + 1); adultsEl.textContent = String(adults);
+});
+document.getElementById('vxBook').addEventListener('submit', function(e){
+  e.preventDefault();
+  note.textContent = 'LINE SUBMITTED';
+  note.classList.add('show');
+});
+addEventListener('keydown', function(e){
+  if(e.key === 'Escape'){ modal.classList.remove('show'); drawer.classList.remove('show'); }
+});
+})();
+</script>
+
+<div class="install-pop" id="installPop">
+  <div class="install-card">
+    <div class="install-head">
+      <div class="install-num">01</div>
+      <div><strong>INSTALL &amp; TOUR</strong><small>This device or scan a phone</small></div>
+      <span class="scan-pill">SCAN ME</span>
+    </div>
+    <div class="install-grid">
+      <div>
+        <img id="installQr" alt="QR code for the Hakika phone app" width="196" height="196">
+        <div class="scan-box">
+          <b>SCAN ME</b>
+          <span>Install as an app — not the browser</span>
+          <small>TYPE ON ANY PHONE</small>
+          <code id="installUrl"></code>
+        </div>
+      </div>
+      <div>
+        <p class="install-copy">Scan the QR, or type the short link on any phone or browser — it opens the same install page.</p>
+        <div class="install-pills">
+          <div><b>FACE</b><small>CAMERA</small></div>
+          <div><b>VOICE</b><small>MIC</small></div>
+          <div><b>FINGER</b><small>SCAN</small></div>
+        </div>
+        <div class="install-label">THIS DEVICE</div>
+        <button class="btn-green" id="installHere" type="button">↓&nbsp;&nbsp;INSTALL ON THIS DEVICE</button>
+        <div class="install-label">OR ANOTHER PHONE</div>
+        <div class="store-row">
+          <button type="button" id="installIos"> App Store</button>
+          <button type="button" id="installAnd">▶&nbsp; Google Play</button>
+        </div>
+      </div>
+    </div>
+    <p class="install-foot">QR for a phone · Install on this device · then tour the desk</p>
+    <div class="install-actions">
+      <button class="btn-green" id="installTour" type="button">PLAY THE TUTORIAL</button>
+      <button class="btn-gray" id="installClose" type="button">CLOSE</button>
+    </div>
+  </div>
+</div>
+<div class="verify" id="verify">
+  <div class="verify-card">
+    <button class="verify-x" id="verifyX" type="button" aria-label="Close">×</button>
+    <h2 id="verifyTitle">Face verification</h2>
+    <p id="verifyStatus"></p>
+    <video id="verifyVideo" playsinline autoplay muted></video>
+    <div class="face-stage" id="faceStage">
+      <canvas class="still" id="verifyStill"></canvas>
+      <canvas id="faceMesh"></canvas>
+    </div>
+    <div class="face-result" id="faceResult"></div>
+    <input id="faceFile" type="file" accept="image/*" hidden>
+    <div class="verify-meter" id="verifyMeter"><i id="verifyLevel"></i></div>
+    <button class="verify-go" id="verifyGo" type="button">START</button>
+    <button class="verify-upload" id="verifyUpload" type="button">UPLOAD PHOTO</button>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script>
+(function(){
+'use strict';
+var deferred = null;
+var pop = document.getElementById('installPop');
+var pageUrl = location.origin + '/?phone=1';
+if(/[?&]phone=1/.test(location.search)) document.documentElement.classList.add('is-phone');
+addEventListener('beforeinstallprompt', function(e){
+  e.preventDefault();
+  deferred = e;
+});
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(function(){});
+}
+function paintQr(url){
+  var img = document.getElementById('installQr');
+  var fallback = 'https://api.qrserver.com/v1/create-qr-code/?size=392x392&margin=8&data=' + encodeURIComponent(url);
+  if(window.QRCode && QRCode.toDataURL){
+    QRCode.toDataURL(url, { width:392, margin:1, color:{ dark:'#111111', light:'#ffffffff' } }, function(err, dataUrl){
+      img.src = err ? fallback : dataUrl;
+    });
+  } else {
+    img.src = fallback;
+  }
+}
+function openInstall(){
+  pop.classList.add('show');
+  document.getElementById('installUrl').textContent = pageUrl.replace(/^https?:\/\//,'');
+  paintQr(pageUrl);
+}
+function closeInstall(){ pop.classList.remove('show'); }
+document.getElementById('vxInstall').addEventListener('click', function(){
+  document.getElementById('vxDrawer').classList.remove('show');
+  openInstall();
+});
+document.getElementById('installClose').addEventListener('click', closeInstall);
+document.getElementById('installTour').addEventListener('click', function(){
+  closeInstall();
+  if(window.__playLanding) window.__playLanding();
+});
+document.getElementById('installHere').addEventListener('click', function(){
+  if(deferred){ deferred.prompt(); deferred = null; return; }
+  document.getElementById('verifyStatus');
+  var note = document.getElementById('installUrl');
+  note.textContent = 'Use the browser menu: Install app, or Add to Home Screen.';
+});
+function storeHint(label){
+  document.getElementById('installUrl').textContent = label + ' uses the same page. Install Hakika from this browser.';
+}
+document.getElementById('installIos').addEventListener('click', function(){ storeHint('iPhone'); });
+document.getElementById('installAnd').addEventListener('click', function(){ storeHint('Android'); });
+if(!document.documentElement.classList.contains('is-phone')) setTimeout(openInstall, 3200);
+
+var box = document.getElementById('verify');
+var title = document.getElementById('verifyTitle');
+var status = document.getElementById('verifyStatus');
+var video = document.getElementById('verifyVideo');
+var still = document.getElementById('verifyStill');
+var meter = document.getElementById('verifyMeter');
+var level = document.getElementById('verifyLevel');
+var go = document.getElementById('verifyGo');
+var stream = null, rec = null, audioCtx = null, raf = 0, mode = '', phase = 'start';
+
+function stopAll(){
+  cancelAnimationFrame(raf);
+  if(rec && rec.state === 'recording') rec.stop();
+  if(stream){ stream.getTracks().forEach(function(t){ t.stop(); }); stream = null; }
+  if(audioCtx){ audioCtx.close(); audioCtx = null; }
+  video.classList.remove('on');
+  still.classList.remove('on');
+  meter.classList.remove('on');
+  var stage = document.getElementById('faceStage');
+  if(stage) stage.classList.remove('on');
+  var result = document.getElementById('faceResult');
+  if(result){ result.className = 'face-result'; result.textContent = ''; }
+}
+document.getElementById('verifyX').addEventListener('click', function(){ stopAll(); box.classList.remove('show'); });
+
+window.__verify = function(card){
+  stopAll();
+  mode = card.sensor;
+  title.textContent = card.l1 + ' ' + card.l2;
+  box.classList.add('show');
+  phase = 'start';
+  document.getElementById('verifyUpload').style.display = mode === 'face' ? '' : 'none';
+  if(mode === 'face'){
+    status.textContent = 'Open the camera or upload a photo. The first face is saved on this device. Later photos are checked against it.';
+    go.textContent = 'OPEN CAMERA';
+  } else if(mode === 'voice'){
+    status.textContent = 'The microphone opens on this phone. Speak for a few seconds.';
+    go.textContent = 'OPEN MICROPHONE';
+  } else {
+    status.textContent = 'The finger scanner on this phone confirms it is you. No fingerprint image is stored.';
+    go.textContent = 'USE FINGER SCANNER';
+  }
+};
+
+go.addEventListener('click', function(){
+  if(phase === 'done'){ box.classList.remove('show'); return; }
+  if(phase === 'capture'){
+    still.width = video.videoWidth || 640;
+    still.height = video.videoHeight || 480;
+    still.getContext('2d').drawImage(video, 0, 0);
+    stopAll();
+    document.getElementById('faceStage').classList.add('on');
+    phase = 'calc';
+    go.disabled = true;
+    runFaceMatch(still);
+    return;
+  }
+  if(phase === 'stop'){
+    if(rec && rec.state === 'recording') rec.stop();
+    return;
+  }
+  if(mode === 'face') startFace();
+  else if(mode === 'voice') startVoice();
+  else startFinger();
+});
+
+var FACE_KEY = 'hakika-face-db';
+var MESH = [
+  [0.32,0.38],[0.40,0.36],[0.48,0.37],[0.56,0.36],[0.64,0.38],
+  [0.30,0.48],[0.38,0.47],[0.46,0.48],[0.38,0.52],[0.46,0.52],
+  [0.62,0.48],[0.70,0.47],[0.54,0.48],[0.62,0.52],[0.70,0.52],
+  [0.50,0.46],[0.50,0.54],[0.50,0.62],[0.46,0.66],[0.54,0.66],
+  [0.40,0.74],[0.46,0.76],[0.50,0.77],[0.54,0.76],[0.60,0.74],
+  [0.28,0.42],[0.36,0.28],[0.50,0.24],[0.64,0.28],[0.72,0.42],
+  [0.24,0.55],[0.26,0.68],[0.34,0.80],[0.50,0.86],[0.66,0.80],[0.74,0.68],[0.76,0.55]
+];
+var EDGES = [[0,1],[1,2],[2,3],[3,4],[5,6],[6,7],[8,6],[8,7],[9,5],[9,7],[10,11],[11,12],[13,11],[13,12],[14,10],[14,12],[15,16],[16,17],[17,18],[18,19],[20,21],[21,22],[22,23],[23,24],[25,0],[26,2],[27,28],[28,4],[29,4],[30,5],[31,20],[32,22],[33,24],[34,29],[35,10],[36,4],[30,31],[31,32],[34,33],[33,32]];
+function loadFaceDb(){
+  try { return JSON.parse(localStorage.getItem(FACE_KEY) || '[]'); }
+  catch(e){ return []; }
+}
+function saveFaceDb(rows){ localStorage.setItem(FACE_KEY, JSON.stringify(rows)); }
+function faceSig(canvas, box){
+  var s = 18, c = document.createElement('canvas');
+  c.width = s; c.height = s;
+  var g = c.getContext('2d');
+  g.drawImage(canvas, box.x, box.y, box.w, box.h, 0, 0, s, s);
+  var d = g.getImageData(0, 0, s, s).data, out = [];
+  for(var i = 0; i < d.length; i += 4) out.push((d[i] * 0.3 + d[i+1] * 0.59 + d[i+2] * 0.11) / 255);
+  return out;
+}
+function faceDist(a, b){
+  var n = 0;
+  for(var i = 0; i < a.length; i++) n += Math.abs(a[i] - b[i]);
+  return n / a.length;
+}
+function faceBox(canvas){
+  return new Promise(function(resolve){
+    if(!window.FaceDetector){
+      resolve({ x: canvas.width * 0.22, y: canvas.height * 0.12, w: canvas.width * 0.56, h: canvas.height * 0.72 });
+      return;
+    }
+    var det = new FaceDetector({ fastMode:true, maxDetectedFaces:1 });
+    det.detect(canvas).then(function(faces){
+      if(!faces.length){
+        resolve({ x: canvas.width * 0.22, y: canvas.height * 0.12, w: canvas.width * 0.56, h: canvas.height * 0.72 });
+        return;
+      }
+      var b = faces[0].boundingBox;
+      resolve({ x:b.x, y:b.y, w:b.width, h:b.height });
+    }).catch(function(){
+      resolve({ x: canvas.width * 0.22, y: canvas.height * 0.12, w: canvas.width * 0.56, h: canvas.height * 0.72 });
+    });
+  });
+}
+function drawMesh(box, t){
+  var mesh = document.getElementById('faceMesh');
+  mesh.width = still.width;
+  mesh.height = still.height;
+  var ctx = mesh.getContext('2d');
+  ctx.clearRect(0, 0, mesh.width, mesh.height);
+  var pts = MESH.map(function(p){ return [box.x + p[0] * box.w, box.y + p[1] * box.h]; });
+  var n = Math.max(1, Math.floor(t * EDGES.length));
+  ctx.lineWidth = 1.6;
+  ctx.strokeStyle = 'rgba(120, 230, 255, 0.95)';
+  ctx.shadowColor = '#7ef0ff';
+  ctx.shadowBlur = 8 + Math.sin(t * 18) * 6;
+  ctx.beginPath();
+  for(var i = 0; i < n; i++){
+    var a = pts[EDGES[i][0]], b = pts[EDGES[i][1]];
+    ctx.moveTo(a[0], a[1]);
+    ctx.lineTo(b[0], b[1]);
+  }
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#d8fbff';
+  pts.forEach(function(p, i){
+    if(i > t * pts.length) return;
+    ctx.beginPath();
+    ctx.arc(p[0], p[1], 2.2, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+function runFaceMatch(canvas){
+  var result = document.getElementById('faceResult');
+  result.className = 'face-result';
+  result.textContent = '';
+  faceBox(canvas).then(function(box){
+    var sig = faceSig(canvas, box);
+    var db = loadFaceDb();
+    var best = 1, hit = null;
+    db.forEach(function(row){
+      var d = faceDist(sig, row.sig);
+      if(d < best){ best = d; hit = row; }
+    });
+    var t0 = performance.now();
+    var dur = 1700;
+    (function frame(now){
+      var t = Math.min(1, (now - t0) / dur);
+      drawMesh(box, t);
+      var shown = (best * t).toFixed(3);
+      status.textContent = 'Grid Δ ' + shown + ' · samples ' + sig.length + ' · records ' + db.length;
+      if(t < 1){ requestAnimationFrame(frame); return; }
+      var enrolled = !db.length;
+      var ok = enrolled || best < 0.16;
+      if(enrolled){
+        saveFaceDb([{ id: Date.now(), sig: sig, at: new Date().toISOString() }]);
+        result.textContent = 'ENROLLED';
+        result.className = 'face-result show ok';
+        status.textContent = 'First face saved in this browser. The next photo is checked against it.';
+      } else if(ok){
+        result.textContent = 'VERIFIED';
+        result.className = 'face-result show ok';
+        status.textContent = 'Match ' + best.toFixed(3) + ' against record ' + hit.id + '.';
+      } else {
+        result.textContent = 'NOT VERIFIED';
+        result.className = 'face-result show no';
+        status.textContent = 'Distance ' + best.toFixed(3) + ' is outside the saved face.';
+      }
+      go.disabled = false;
+      go.textContent = 'DONE';
+      phase = 'done';
+    })(t0);
+  });
+}
+document.getElementById('verifyUpload').addEventListener('click', function(){
+  if(mode !== 'face') return;
+  document.getElementById('faceFile').click();
+});
+document.getElementById('faceFile').addEventListener('change', function(e){
+  var file = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if(!file) return;
+  var img = new Image();
+  img.onload = function(){
+    stopAll();
+    still.width = img.naturalWidth;
+    still.height = img.naturalHeight;
+    still.getContext('2d').drawImage(img, 0, 0);
+    document.getElementById('faceStage').classList.add('on');
+    phase = 'calc';
+    go.disabled = true;
+    runFaceMatch(still);
+  };
+  img.src = URL.createObjectURL(file);
+});
+
+function startFace(){
+  navigator.mediaDevices.getUserMedia({ video:{ facingMode:'user' }, audio:false }).then(function(s){
+    stream = s;
+    video.srcObject = s;
+    video.classList.add('on');
+    status.textContent = 'Camera is live. Capture a still when the face is in frame.';
+    go.textContent = 'CAPTURE';
+    phase = 'capture';
+  }).catch(function(){ status.textContent = 'Camera permission was blocked.'; });
+}
+
+function startVoice(){
+  navigator.mediaDevices.getUserMedia({ audio:true, video:false }).then(function(s){
+    stream = s;
+    meter.classList.add('on');
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    var src = audioCtx.createMediaStreamSource(s);
+    var an = audioCtx.createAnalyser();
+    an.fftSize = 256;
+    src.connect(an);
+    var data = new Uint8Array(an.fftSize);
+    (function tick(){
+      an.getByteTimeDomainData(data);
+      var peak = 0;
+      for(var i=0;i<data.length;i++) peak = Math.max(peak, Math.abs(data[i]-128));
+      level.style.width = Math.min(100, peak * 1.4) + '%';
+      raf = requestAnimationFrame(tick);
+    })();
+    var chunks = [];
+    rec = new MediaRecorder(s);
+    rec.ondataavailable = function(e){ if(e.data.size) chunks.push(e.data); };
+    rec.onstop = function(){
+      stopAll();
+      status.textContent = 'Voice sample captured (' + chunks.length + ' part' + (chunks.length===1?'':'s') + ').';
+      go.textContent = 'DONE';
+      phase = 'done';
+    };
+    rec.start();
+    status.textContent = 'Microphone is live. Keep speaking.';
+    go.textContent = 'STOP';
+    phase = 'stop';
+  }).catch(function(){ status.textContent = 'Microphone permission was blocked.'; });
+}
+
+function startFinger(){
+  if(!window.PublicKeyCredential){
+    status.textContent = 'This browser has no finger scanner API.';
+    return;
+  }
+  var id = crypto.getRandomValues(new Uint8Array(16));
+  navigator.credentials.create({
+    publicKey:{
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      rp:{ name:'Hakika' },
+      user:{ id:id, name:'subscriber@hakika', displayName:'Subscriber' },
+      pubKeyCredParams:[{ type:'public-key', alg:-7 }, { type:'public-key', alg:-257 }],
+      authenticatorSelection:{ authenticatorAttachment:'platform', userVerification:'required', residentKey:'preferred' },
+      timeout:60000
+    }
+  }).then(function(cred){
+    status.textContent = 'Finger scanner confirmed. Credential ' + cred.id.slice(0, 12) + '…';
+    go.textContent = 'DONE';
+    phase = 'done';
+  }).catch(function(err){
+    status.textContent = err && err.name === 'NotAllowedError'
+      ? 'Finger scan was cancelled.'
+      : 'No platform finger scanner is available on this device.';
+  });
+}
+})();
+</script>
+
+</body>
+</html>

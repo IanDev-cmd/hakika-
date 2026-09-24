@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: hakika
+    runtime: static
+    buildCommand: echo "Hakika"
+    staticPublishPath: .
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
