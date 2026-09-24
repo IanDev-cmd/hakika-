@@ -1477,37 +1477,65 @@ var note = document.getElementById('vxNote');
 var adultsEl = document.getElementById('vxAdults');
 var modal = document.getElementById('vxModal');
 var drawer = document.getElementById('vxDrawer');
-var adults = 1, step = 0, current = PLACES[1], zoomTimer = 0;
+var adults = 1, step = 0, current = null, zoomTimer = 0, rows = [], listKind = '';
 
-PLACES.forEach(function(p, i){
-  var li = document.createElement('li');
-  li.className = 'vx-item' + (i === 0 ? ' open' : '');
-  var b = document.createElement('button');
-  b.type = 'button';
-  b.className = 'vx-row vx-hit';
-  b.textContent = p.name;
-  b.addEventListener('click', function(){ expandPlace(p); });
-  var shot = document.createElement('div');
-  shot.className = 'vx-shot';
-  shot.style.background = p.fall;
-  var im = document.createElement('img');
-  im.alt = '';
-  im.src = p.img;
-  im.addEventListener('error', function(){ im.remove(); });
-  var go = document.createElement('button');
-  go.type = 'button';
-  go.className = 'vx-explore vx-hit';
-  go.textContent = 'REGISTER';
-  go.addEventListener('click', function(ev){ ev.stopPropagation(); openPlace(p); });
-  shot.appendChild(im);
-  shot.appendChild(go);
-  li.appendChild(b);
-  li.appendChild(shot);
-  list.appendChild(li);
-  p.btn = b;
-  p.li = li;
-});
-current = PLACES[0];
+function asRow(item){
+  return {
+    id: item.id,
+    name: item.name || ((item.l1 || '') + ' ' + (item.l2 || '')).trim().toUpperCase(),
+    country: item.country || '',
+    lat: item.lat,
+    lng: item.lng,
+    img: item.img,
+    fall: item.fall,
+    sensor: item.sensor || null
+  };
+}
+function mountList(source){
+  list.innerHTML = '';
+  rows = source.map(asRow);
+  rows.forEach(function(p, i){
+    var li = document.createElement('li');
+    li.className = 'vx-item' + (i === 0 ? ' open' : '');
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'vx-row vx-hit';
+    b.textContent = p.name;
+    b.addEventListener('click', function(){ expandPlace(p); });
+    var shot = document.createElement('div');
+    shot.className = 'vx-shot';
+    var im = document.createElement('img');
+    im.alt = '';
+    im.src = p.img;
+    im.addEventListener('error', function(){ im.remove(); });
+    var go = document.createElement('button');
+    go.type = 'button';
+    go.className = 'vx-explore vx-hit';
+    go.textContent = 'REGISTER';
+    go.addEventListener('click', function(ev){
+      ev.stopPropagation();
+      if(p.sensor && window.__verify){
+        var card = (window.HAKIKA_CARDS || []).filter(function(c){ return c.id === p.id; })[0];
+        if(card) window.__verify(card);
+        return;
+      }
+      openPlace(p);
+    });
+    shot.appendChild(im);
+    shot.appendChild(go);
+    li.appendChild(b);
+    li.appendChild(shot);
+    list.appendChild(li);
+    p.li = li;
+  });
+  current = rows[0] || null;
+}
+function useList(kind){
+  if(listKind === kind) return;
+  listKind = kind;
+  mountList(kind === 'places' ? PLACES : (window.HAKIKA_CARDS || []));
+}
+useList('lines');
 
 function setStep(n){
   step = n;
@@ -1525,7 +1553,9 @@ function setStep(n){
     document.getElementById('dTitle').style.opacity = '0';
   }
   drawer.classList.remove('show');
-  if(n === 2 && window.__markPlace) window.__markPlace(current.lat, current.lng);
+  if(n === 0) useList('lines');
+  if(n === 2) useList('places');
+  if(n === 2 && window.__markPlace && current) window.__markPlace(current.lat, current.lng);
   if(n === 3) fillStage(current);
 }
 function playShrink(){
@@ -1544,19 +1574,17 @@ function fillStage(p){
   photo.src = p.img || '';
   photo.onerror = function(){ photo.removeAttribute('src'); };
   note.classList.remove('show');
-  PLACES.forEach(function(o){ if(o.li) o.li.classList.toggle('open', o === p); });
+  rows.forEach(function(o){ if(o.li) o.li.classList.toggle('open', o === p); });
 }
 function expandPlace(p){
   current = p;
-  country.textContent = p.country;
-  PLACES.forEach(function(o){ if(o.li) o.li.classList.toggle('open', o === p); });
-  if(step !== 2) setStep(2);
-  if(window.__markPlace) window.__markPlace(p.lat, p.lng);
+  if(p.country) country.textContent = p.country;
+  rows.forEach(function(o){ if(o.li) o.li.classList.toggle('open', o === p); });
+  if(window.__markPlace && p.lat != null) window.__markPlace(p.lat, p.lng);
 }
 function openPlace(p){
   fillStage(p);
-  if(window.__markPlace) window.__markPlace(p.lat, p.lng);
-  if(step !== 2) setStep(2);
+  if(window.__markPlace && p.lat != null) window.__markPlace(p.lat, p.lng);
   app.classList.add('vx-zoom');
   window.__globeHold = true;
   clearTimeout(zoomTimer);
