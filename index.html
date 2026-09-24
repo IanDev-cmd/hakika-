@@ -437,7 +437,7 @@ html, body, a, button, .card{ cursor:none; }
   margin:0; font-size:3.6vw; font-weight:600; letter-spacing:.01em; color:#fff;
 }
 .app.vx-s1 .vx-world{ opacity:1; }
-.app.vx-s1 .globe-wrap{ opacity:0; }
+.app.vx-s1 .globe-wrap{ opacity:1; }
 .vx-country{
   position:absolute; left:46%; top:42%; z-index:4; margin:0;
   font-size:6.4vw; font-weight:700; letter-spacing:.08em; color:rgba(255,255,255,.28);
@@ -1161,24 +1161,27 @@ html.is-app.pwa-globe #hkGlobeBack{ display:block; }
   (function loop(){
     requestAnimationFrame(loop);
     sync();
+    var spinStep = 0.0022 + (window.__spinBoost || 0);
     if(window.__globeAim && window.__globeAim.t0){
       var aim = window.__globeAim;
       var t = Math.min(1, (performance.now() - aim.t0) / aim.dur);
       var e = 1 - Math.pow(1 - t, 3);
+      aim.from += spinStep;
+      aim.to += spinStep;
       spin.rotation.y = aim.from + (aim.to - aim.from) * e;
       if(t >= 1){
         var done = aim.done;
         window.__globeAim = null;
         if(done) done();
       }
-    } else if(window.__globeDrag){
-      spin.rotation.y += window.__globeDrag.y;
-      tilt.rotation.x += window.__globeDrag.x;
-      tilt.rotation.x = Math.max(-0.6, Math.min(0.6, tilt.rotation.x));
-      window.__globeDrag.y = 0;
-      window.__globeDrag.x = 0;
     } else {
-      spin.rotation.y += 0.0019 + (window.__spinBoost || 0);
+      spin.rotation.y += spinStep;
+    }
+    if(window.__globeDrag){
+      spin.rotation.y += window.__globeDrag.y || 0;
+      tilt.rotation.x += window.__globeDrag.x || 0;
+      tilt.rotation.x = Math.max(-0.6, Math.min(0.6, tilt.rotation.x));
+      window.__globeDrag = null;
     }
     renderer.render(scene, camera);
   })();
