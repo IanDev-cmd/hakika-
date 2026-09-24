@@ -1,0 +1,11 @@
+{
+  "name": "hakika-serve",
+  "version": "1.0.0",
+  "type": "module",
+  "bin": {
+    "uvicorn": "./uvicorn.js"
+  },
+  "dependencies": {
+    "@simplewebauthn/server": "11.0.0"
+  }
+}

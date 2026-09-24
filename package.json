@@ -1,0 +1,7 @@
+{
+  "name": "hakika",
+  "private": true,
+  "dependencies": {
+    "hakika-serve": "file:./server"
+  }
+}

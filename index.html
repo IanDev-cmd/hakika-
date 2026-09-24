@@ -627,6 +627,10 @@ html, body, a, button, .card{ cursor:none; }
 .verify-meter{ height:8px; background:#e6eef5; border-radius:99px; overflow:hidden; display:none; margin-bottom:12px; }
 .verify-meter.on{ display:block; }
 .verify-meter i{ display:block; height:100%; width:0; background:#1faa4a; }
+.voice-wave{ width:100%; height:140px; background:#061018; border-radius:10px; display:none; margin-bottom:8px; }
+.voice-wave.on{ display:block; }
+.voice-phrase{ display:none; margin:0 0 10px; font-size:18px; font-weight:800; color:#0b3a66; }
+.voice-phrase.on{ display:block; }
 .verify-go{
   margin-top:12px; width:100%; border:none; background:#1faa45; color:#fff;
   font:inherit; font-weight:800; letter-spacing:.04em; padding:14px; border-radius:12px; cursor:pointer;
@@ -1477,6 +1481,8 @@ addEventListener('keydown', function(e){
     </div>
     <div class="face-result" id="faceResult"></div>
     <input id="faceFile" type="file" accept="image/*" hidden>
+    <p class="voice-phrase" id="voicePhrase"></p>
+    <canvas id="voiceWave" class="voice-wave" width="640" height="160"></canvas>
     <div class="verify-meter" id="verifyMeter"><i id="verifyLevel"></i></div>
     <button class="verify-go" id="verifyGo" type="button">START</button>
     <button class="verify-upload" id="verifyUpload" type="button">UPLOAD PHOTO</button>
@@ -1554,6 +1560,10 @@ function stopAll(){
   video.classList.remove('on');
   still.classList.remove('on');
   meter.classList.remove('on');
+  var phraseEl = document.getElementById('voicePhrase');
+  var wave = document.getElementById('voiceWave');
+  if(phraseEl) phraseEl.classList.remove('on');
+  if(wave) wave.classList.remove('on');
   var stage = document.getElementById('faceStage');
   if(stage) stage.classList.remove('on');
   var result = document.getElementById('faceResult');
@@ -1572,10 +1582,10 @@ window.__verify = function(card){
     status.textContent = 'Open the camera or upload a photo. The first face is saved on this device. Later photos are checked against it.';
     go.textContent = 'OPEN CAMERA';
   } else if(mode === 'voice'){
-    status.textContent = 'The microphone opens on this phone. Speak for a few seconds.';
+    status.textContent = 'The microphone opens on this phone. Read the phrase for about four seconds.';
     go.textContent = 'OPEN MICROPHONE';
   } else {
-    status.textContent = 'The finger scanner on this phone confirms it is you. No fingerprint image is stored.';
+    status.textContent = 'The phone biometric sheet confirms it is you. No fingerprint image is stored. Voice follows the scan.';
     go.textContent = 'USE FINGER SCANNER';
   }
 };
@@ -1754,62 +1764,169 @@ function startFace(){
   }).catch(function(){ status.textContent = 'Camera permission was blocked.'; });
 }
 
+function secureOrExplain(){
+  if(window.isSecureContext) return true;
+  status.textContent = 'Fingerprint and the microphone need the HTTPS address of this app.';
+  return false;
+}
+function postJson(url, body){
+  return fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body || {})
+  }).then(function(r){
+    return r.json().then(function(data){
+      if(!r.ok) throw new Error(data.error || 'Request failed');
+      return data;
+    });
+  });
+}
+function loadSwa(){
+  return import('https://cdn.jsdelivr.net/npm/@simplewebauthn/browser@11.0.0/+esm');
+}
+function drawBars(an, freq){
+  var canvas = document.getElementById('voiceWave');
+  var ctx = canvas.getContext('2d');
+  an.getByteFrequencyData(freq);
+  ctx.fillStyle = '#061018';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  var n = 32, step = Math.floor(freq.length / n), gap = 4;
+  var w = (canvas.width - gap * (n + 1)) / n;
+  for(var i = 0; i < n; i++){
+    var v = freq[i * step] / 255;
+    var h = Math.max(4, v * canvas.height);
+    ctx.fillStyle = i % 2 ? '#3b82f6' : '#60a5fa';
+    ctx.fillRect(gap + i * (w + gap), canvas.height - h, w, h);
+  }
+}
 function startVoice(){
-  navigator.mediaDevices.getUserMedia({ audio:true, video:false }).then(function(s){
-    stream = s;
+  if(!secureOrExplain()) return Promise.resolve();
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    status.textContent = 'This browser has no microphone API.';
+    return Promise.resolve();
+  }
+  var phraseEl = document.getElementById('voicePhrase');
+  var wave = document.getElementById('voiceWave');
+  return postJson('/api/voice/phrase').then(function(issued){
+    phraseEl.textContent = issued.phrase;
+    phraseEl.classList.add('on');
+    wave.classList.add('on');
     meter.classList.add('on');
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    var src = audioCtx.createMediaStreamSource(s);
-    var an = audioCtx.createAnalyser();
-    an.fftSize = 256;
-    src.connect(an);
-    var data = new Uint8Array(an.fftSize);
-    (function tick(){
-      an.getByteTimeDomainData(data);
+    return navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(function(s){
+      stream = s;
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      var src = audioCtx.createMediaStreamSource(s);
+      var an = audioCtx.createAnalyser();
+      an.fftSize = 256;
+      src.connect(an);
+      var time = new Uint8Array(an.fftSize);
+      var freq = new Uint8Array(an.frequencyBinCount);
       var peak = 0;
-      for(var i=0;i<data.length;i++) peak = Math.max(peak, Math.abs(data[i]-128));
-      level.style.width = Math.min(100, peak * 1.4) + '%';
-      raf = requestAnimationFrame(tick);
-    })();
-    var chunks = [];
-    rec = new MediaRecorder(s);
-    rec.ondataavailable = function(e){ if(e.data.size) chunks.push(e.data); };
-    rec.onstop = function(){
-      stopAll();
-      status.textContent = 'Voice sample captured (' + chunks.length + ' part' + (chunks.length===1?'':'s') + ').';
-      go.textContent = 'DONE';
-      phase = 'done';
-    };
-    rec.start();
-    status.textContent = 'Microphone is live. Keep speaking.';
-    go.textContent = 'STOP';
-    phase = 'stop';
-  }).catch(function(){ status.textContent = 'Microphone permission was blocked.'; });
+      var started = performance.now();
+      (function tick(){
+        an.getByteTimeDomainData(time);
+        var local = 0;
+        for(var i = 0; i < time.length; i++) local = Math.max(local, Math.abs(time[i] - 128));
+        peak = Math.max(peak, local);
+        level.style.width = Math.min(100, local * 1.4) + '%';
+        drawBars(an, freq);
+        raf = requestAnimationFrame(tick);
+      })();
+      var chunks = [];
+      var mime = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
+      rec = mime ? new MediaRecorder(s, { mimeType: mime }) : new MediaRecorder(s);
+      rec.ondataavailable = function(e){ if(e.data && e.data.size) chunks.push(e.data); };
+      rec.onstop = function(){
+        var seconds = (performance.now() - started) / 1000;
+        var blob = new Blob(chunks, { type: rec.mimeType || 'audio/webm' });
+        var reader = new FileReader();
+        reader.onload = function(){
+          var dataUrl = String(reader.result || '');
+          var audioBase64 = dataUrl.indexOf(',') >= 0 ? dataUrl.split(',')[1] : '';
+          stopAll();
+          phraseEl.classList.remove('on');
+          wave.classList.remove('on');
+          postJson('/api/voice/verify', {
+            id: issued.id,
+            phrase: issued.phrase,
+            peak: peak,
+            seconds: Math.round(seconds * 10) / 10,
+            audioBase64: audioBase64
+          }).then(function(){
+            status.textContent = 'Voice verified. The sample was loud enough and matched the phrase.';
+            go.textContent = 'DONE';
+            phase = 'done';
+          }).catch(function(err){
+            status.textContent = err.message || 'Voice check failed.';
+            go.textContent = 'TRY AGAIN';
+            phase = 'start';
+          });
+        };
+        reader.readAsDataURL(blob);
+      };
+      rec.start();
+      status.textContent = 'Read the phrase clearly. Recording stops after four seconds.';
+      go.textContent = 'STOP';
+      phase = 'stop';
+      setTimeout(function(){
+        if(rec && rec.state === 'recording') rec.stop();
+      }, 4000);
+    });
+  }).catch(function(err){
+    status.textContent = err && err.name === 'NotAllowedError'
+      ? 'Microphone permission was blocked.'
+      : (err && err.message ? err.message : 'Microphone could not start.');
+  });
 }
 
 function startFinger(){
+  if(!secureOrExplain()) return;
   if(!window.PublicKeyCredential){
     status.textContent = 'This browser has no finger scanner API.';
     return;
   }
-  var id = crypto.getRandomValues(new Uint8Array(16));
-  navigator.credentials.create({
-    publicKey:{
-      challenge: crypto.getRandomValues(new Uint8Array(32)),
-      rp:{ name:'Hakika' },
-      user:{ id:id, name:'subscriber@hakika', displayName:'Subscriber' },
-      pubKeyCredParams:[{ type:'public-key', alg:-7 }, { type:'public-key', alg:-257 }],
-      authenticatorSelection:{ authenticatorAttachment:'platform', userVerification:'required', residentKey:'preferred' },
-      timeout:60000
+  go.disabled = true;
+  status.textContent = 'Asking the phone for its built-in fingerprint or face unlock…';
+  function accountName(){
+    var key = 'hakika-account';
+    var name = localStorage.getItem(key);
+    if(!name){
+      name = 'subscriber-' + crypto.randomUUID() + '@hakika';
+      localStorage.setItem(key, name);
     }
-  }).then(function(cred){
-    status.textContent = 'Finger scanner confirmed. Credential ' + cred.id.slice(0, 12) + '…';
-    go.textContent = 'DONE';
-    phase = 'done';
+    return name;
+  }
+  var username = accountName();
+  loadSwa().then(function(swa){
+    return PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().then(function(ok){
+      if(!ok) throw new Error('This device has no built-in fingerprint or face unlock.');
+      return postJson('/api/webauthn/register/options', { username: username }).then(function(pack){
+        return swa.startRegistration(pack.options).then(function(att){
+          return postJson('/api/webauthn/register/verify', { sid: pack.sid, response: att });
+        });
+      }).catch(function(err){
+        if(err && err.name === 'InvalidStateError') return { ok: true };
+        throw err;
+      }).then(function(){
+        return postJson('/api/webauthn/login/options', { username: username });
+      }).then(function(pack){
+        status.textContent = 'Confirm with the phone biometric sheet.';
+        return swa.startAuthentication(pack.options).then(function(assertion){
+          return postJson('/api/webauthn/login/verify', { sid: pack.sid, response: assertion });
+        });
+      });
+    });
+  }).then(function(){
+    go.disabled = false;
+    status.textContent = 'Fingerprint confirmed. Read the phrase on the next step.';
+    title.textContent = 'Voice verification';
+    mode = 'voice';
+    return startVoice();
   }).catch(function(err){
+    go.disabled = false;
     status.textContent = err && err.name === 'NotAllowedError'
       ? 'Finger scan was cancelled.'
-      : 'No platform finger scanner is available on this device.';
+      : (err && err.message ? err.message : 'No platform finger scanner is available on this device.');
   });
 }
 })();
