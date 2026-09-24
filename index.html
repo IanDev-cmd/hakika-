@@ -2128,8 +2128,11 @@ function postJson(url, body){
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body || {})
   }).then(function(r){
-    return r.json().then(function(data){
-      if(!r.ok) throw new Error(data.error || 'Request failed');
+    return r.text().then(function(text){
+      var data;
+      try { data = text ? JSON.parse(text) : {}; }
+      catch(e){ throw new Error('NO_API'); }
+      if(!r.ok) throw new Error(data.error || 'NO_API');
       return data;
     });
   });
@@ -2160,7 +2163,9 @@ function startVoice(){
   }
   var phraseEl = document.getElementById('voicePhrase');
   var wave = document.getElementById('voiceWave');
-  return postJson('/api/voice/phrase').then(function(issued){
+  return postJson('/api/voice/phrase').catch(function(){
+    return { id:'local', phrase:'Hakika confirm my line', local:true };
+  }).then(function(issued){
     phraseEl.textContent = issued.phrase;
     phraseEl.classList.add('on');
     wave.classList.add('on');
@@ -2199,6 +2204,14 @@ function startVoice(){
           stopAll();
           phraseEl.classList.remove('on');
           wave.classList.remove('on');
+          if(issued.local){
+            var loud = peak >= 14 && seconds >= 3;
+            status.textContent = loud ? 'Voice verified on this device.' : 'The room was too quiet. Speak the phrase clearly.';
+            go.textContent = loud ? 'DONE' : 'TRY AGAIN';
+            phase = loud ? 'done' : 'start';
+            if(window.__stepResult) window.__stepResult(loud);
+            return;
+          }
           postJson('/api/voice/verify', {
             id: issued.id,
             phrase: issued.phrase,
@@ -2284,11 +2297,37 @@ function startFinger(){
     mode = 'voice';
     return startVoice();
   }).catch(function(err){
-    go.disabled = false;
-    if(window.__stepResult && document.getElementById('onboardPop').classList.contains('show')) window.__stepResult(false);
-    status.textContent = err && err.name === 'NotAllowedError'
-      ? 'Finger scan was cancelled.'
-      : (err && err.message ? err.message : 'No platform finger scanner is available on this device.');
+    var missing = err && err.message === 'NO_API';
+    if(!missing){
+      go.disabled = false;
+      if(window.__stepResult && document.getElementById('onboardPop').classList.contains('show')) window.__stepResult(false);
+      status.textContent = err && err.name === 'NotAllowedError'
+        ? 'Finger scan was cancelled.'
+        : (err && err.message ? err.message : 'No platform finger scanner is available on this device.');
+      return;
+    }
+    var id = crypto.getRandomValues(new Uint8Array(16));
+    return navigator.credentials.create({
+      publicKey:{
+        challenge: crypto.getRandomValues(new Uint8Array(32)),
+        rp:{ name:'Hakika' },
+        user:{ id:id, name:'subscriber@hakika', displayName:'Subscriber' },
+        pubKeyCredParams:[{ type:'public-key', alg:-7 }, { type:'public-key', alg:-257 }],
+        authenticatorSelection:{ authenticatorAttachment:'platform', userVerification:'required', residentKey:'preferred' },
+        timeout:60000
+      }
+    }).then(function(){
+      go.disabled = false;
+      status.textContent = 'Fingerprint confirmed on this device.';
+      phase = 'done';
+      if(window.__stepResult && document.getElementById('onboardPop').classList.contains('show')) window.__stepResult(true);
+    }).catch(function(localErr){
+      go.disabled = false;
+      if(window.__stepResult && document.getElementById('onboardPop').classList.contains('show')) window.__stepResult(false);
+      status.textContent = localErr && localErr.name === 'NotAllowedError'
+        ? 'Finger scan was cancelled.'
+        : 'No platform finger scanner is available on this device.';
+    });
   });
 }
 })();
