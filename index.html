@@ -1101,37 +1101,37 @@ html.is-install #phoneInstall, html.is-app #phoneApp{
    broken box. The kingfisher is the actual photo used in the reference. */
 var CARDS = [
   { id:'face', l1:'Face', l2:'verification', sensor:'face', lat:-1.29, lng:36.82,
-    img: 'hakika-photos/hakika-face.png',
+    img: 'hakika-photos/hakika-face.svg',
     fall:'linear-gradient(170deg,#3fc4e8,#0b6ba8 60%,#07406e)',
     campaign:null,
     text:"The phone camera matches the subscriber’s face to the ID on file. Hakika asks for the camera only when this card is opened." },
 
   { id:'voice', l1:'Voice', l2:'verification', sensor:'voice', lat:0.51, lng:35.27,
-    img: 'hakika-photos/hakika-voice.png',
+    img: 'hakika-photos/hakika-voice.svg',
     fall:'linear-gradient(170deg,#d9c3a6 0%,#8d6a45 55%,#3d2a1c 100%)',
     campaign:null,
     text:"The phone microphone takes a short voice sample. Hakika asks for the microphone only when this card is opened." },
 
   { id:'finger', l1:'Biometric', l2:'verification', sensor:'finger', lat:0.35, lng:32.58,
-    img: 'hakika-photos/hakika-finger.png',
+    img: 'hakika-photos/hakika-finger.svg',
     fall:'linear-gradient(165deg,#1c2430 0%,#0e1622 55%,#070d16 100%)',
     campaign:'USSD + SMS',
     text:"The phone finger scanner confirms the subscriber through the device biometric. Hakika uses the platform authenticator, not a stored fingerprint image." },
 
   { id:'sms', l1:'SMS', l2:'receipt', lat:0.52, lng:25.19,
-    img: 'hakika-photos/hakika-sms.png',
+    img: 'hakika-photos/hakika-sms.svg',
     fall:'linear-gradient(165deg,#123a62 0%,#0c6ea8 45%,#071a33 100%)',
     campaign:null,
     text:"When the line is accepted, or held, the result arrives as an SMS. The subscriber does not need a data connection to know the registration state." },
 
   { id:'agent', l1:'Agent', l2:'desk', lat:0.42, lng:9.47,
-    img: 'hakika-photos/hakika-agent.png',
+    img: 'hakika-photos/hakika-agent.svg',
     fall:'linear-gradient(160deg,#e7d7b8,#b08a52 60%,#5c4528)',
     campaign:null,
     text:"Shop agents register lines for people who cannot self-serve. Float, commission, and the day’s registrations stay on the same USSD menu the agent already uses." },
 
   { id:'rural', l1:'Rural', l2:'line', lat:0.34, lng:6.73,
-    img: 'hakika-photos/hakika-rural.png',
+    img: 'hakika-photos/hakika-rural.svg',
     fall:'linear-gradient(170deg,#f2c489 0%,#b8803f 38%,#5a4526 72%,#2c2415 100%)',
     campaign:null,
     text:"The same plugin serves a roadside kiosk on the equator. Low-literacy prompts stay short, and a voice fallback can read the USSD steps aloud." }
@@ -1352,19 +1352,19 @@ addEventListener('keydown', function(e){ if(e.key === 'Escape') close(); });
 var PW = 'https://commons.wikimedia.org/wiki/Special:FilePath/';
 var PLACES = [
   { id:'ussd', name:'USSD MENU', country:'NAIROBI', lat:-1.29, lng:36.82,
-    img: 'hakika-photos/hakika-ussd.png',
+    img: 'hakika-photos/hakika-ussd.svg',
     fall:'linear-gradient(180deg,#1c2430,#0e1622 55%,#070d16)' },
   { id:'agent', name:'AGENT DESK', country:'KAMPALA', lat:0.35, lng:32.58,
-    img: 'hakika-photos/hakika-agent.png',
+    img: 'hakika-photos/hakika-agent.svg',
     fall:'linear-gradient(180deg,#e7d7b8,#b08a52 48%,#3a2a16)' },
   { id:'idface', name:'ID AND FACE', country:'ELDORET', lat:0.51, lng:35.27,
-    img: 'hakika-photos/hakika-id.png',
+    img: 'hakika-photos/hakika-id.svg',
     fall:'linear-gradient(180deg,#d9c3a6,#8d6a45 50%,#2c1c12)' },
   { id:'sms', name:'SMS RESULT', country:'KISANGANI', lat:0.52, lng:25.19,
-    img: 'hakika-photos/hakika-sms.png',
+    img: 'hakika-photos/hakika-sms.svg',
     fall:'linear-gradient(180deg,#8ec4e8,#0c6ea8 50%,#071a33)' },
   { id:'live', name:'LINE LIVE', country:'LIBREVILLE', lat:0.42, lng:9.47,
-    img: 'hakika-photos/hakika-live.png',
+    img: 'hakika-photos/hakika-live.svg',
     fall:'linear-gradient(180deg,#9eb0bc,#1f6b4a 55%,#10241c)' }
 ];
 var app = document.getElementById('app');
