@@ -5,6 +5,9 @@
   "start_url": "/?phone=1",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "id": "/?phone=1",
   "background_color": "#0470d0",
   "theme_color": "#0470d0",
   "icons": [

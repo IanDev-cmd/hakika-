@@ -8,6 +8,17 @@
 <meta name="theme-color" content="#0470d0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Hakika">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="hakika-photos/hakika-icon.png">
+<script>
+(function(){
+  var standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  var phone = /[?&]phone=1/.test(location.search) || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  if(standalone) document.documentElement.classList.add('is-app');
+  else if(phone) document.documentElement.classList.add('is-install');
+  if(phone || standalone) document.documentElement.classList.add('is-phone');
+})();
+</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -693,6 +704,45 @@ html, body, a, button, .card{ cursor:none; }
   position:absolute; right:10px; top:8px; border:none; background:none;
   font-size:22px; cursor:pointer; color:#1a2733;
 }
+html.is-install #app, html.is-app #app, html.is-install .cursor, html.is-app .cursor{ display:none !important; }
+#phoneInstall, #phoneApp{ display:none; }
+html.is-install #phoneInstall, html.is-app #phoneApp{
+  display:flex; flex-direction:column; min-height:100%;
+  background:linear-gradient(180deg,#2eb4ef 0%, #0470d0 42%, #06386e 100%);
+  color:#fff; font-family:'Quicksand',sans-serif;
+}
+.p-wrap{ width:min(520px, 100%); margin:0 auto; padding:22px 16px 32px; }
+.p-brand{ margin:8px 0 4px; font-size:28px; letter-spacing:.16em; font-weight:700; }
+.p-sub{ margin:0 0 18px; font-weight:600; opacity:.9; }
+.p-card{
+  position:relative; display:block; width:100%; height:168px; margin:0 0 14px;
+  border:none; border-radius:18px; overflow:hidden; padding:0; text-align:left;
+  box-shadow:0 16px 36px rgba(0,20,50,.28);
+}
+.p-card .shot{ position:absolute; inset:0; }
+.p-card img{ width:100%; height:100%; object-fit:cover; display:block; }
+.p-card .cap{
+  position:absolute; left:16px; bottom:14px; z-index:2; color:#fff;
+  font-size:22px; font-weight:700; line-height:1.1;
+  text-shadow:0 1px 3px rgba(0,30,60,.32);
+}
+.p-detail{
+  display:none; position:fixed; inset:0; z-index:5; overflow:auto;
+  background:linear-gradient(180deg,#2eb4ef 0%, #0470d0 42%, #06386e 100%);
+}
+.p-detail.show{ display:block; }
+.p-back{
+  margin:18px 16px 0; border:none; background:none; color:#fff;
+  font:inherit; font-weight:700; letter-spacing:.08em;
+}
+.p-detail h1{ margin:12px 16px; font-size:34px; line-height:.98; }
+.p-panel{
+  margin:0 16px 24px; background:#fff; color:#16181d; border-radius:22px;
+  padding:18px; box-shadow:0 30px 70px rgba(0,16,40,.28);
+}
+.p-panel img{ width:100%; height:210px; object-fit:cover; border-radius:12px; background:#0d3f6d; }
+.p-panel p{ font-weight:600; color:#2a3340; line-height:1.45; }
+#phoneInstall .install-card{ margin:auto; }
 </style>
 </head>
 <body>
@@ -1049,7 +1099,6 @@ html, body, a, button, .card{ cursor:none; }
 /* Card imagery. Every entry has a CSS gradient underneath and an onerror
    handler, so a dead URL degrades to something intentional rather than a
    broken box. The kingfisher is the actual photo used in the reference. */
-var W = 'https://commons.wikimedia.org/wiki/Special:FilePath/';
 var CARDS = [
   { id:'face', l1:'Face', l2:'verification', sensor:'face', lat:-1.29, lng:36.82,
     img: 'hakika-photos/hakika-face.png',
@@ -1087,6 +1136,7 @@ var CARDS = [
     campaign:null,
     text:"The same plugin serves a roadside kiosk on the equator. Low-literacy prompts stay short, and a voice fallback can read the USSD steps aloud." }
 ];
+window.HAKIKA_CARDS = CARDS;
 
 var app    = document.getElementById('app');
 var track  = document.getElementById('track');
@@ -1630,6 +1680,37 @@ addEventListener('keydown', function(e){
     </div>
   </div>
 </div>
+<div id="phoneInstall">
+  <div class="install-card">
+    <div class="install-head">
+      <div class="install-num">01</div>
+      <div><strong>INSTALL HAKIKA</strong><small>Home screen app</small></div>
+    </div>
+    <p class="install-copy">This installs Hakika on the phone. It opens from the home screen as its own app, not as a browser tab.</p>
+    <div class="install-pills">
+      <div><b>FACE</b><small>CAMERA</small></div>
+      <div><b>VOICE</b><small>MIC</small></div>
+      <div><b>FINGER</b><small>SCAN</small></div>
+    </div>
+    <button class="btn-green" id="phoneInstallBtn" type="button">INSTALL APP</button>
+    <p class="install-foot" id="phoneInstallNote"></p>
+  </div>
+</div>
+<div id="phoneApp">
+  <div class="p-wrap">
+    <div class="p-brand">HAKIKA</div>
+    <p class="p-sub">Your Verified Digital ID</p>
+    <div id="phoneCards"></div>
+  </div>
+  <div class="p-detail" id="phoneDetail">
+    <button class="p-back" id="phoneBack" type="button">BACK</button>
+    <h1 id="phoneTitle"></h1>
+    <div class="p-panel">
+      <img id="phoneImg" alt="">
+      <p id="phoneCopy"></p>
+    </div>
+  </div>
+</div>
 <div class="verify" id="verify">
   <div class="verify-card">
     <button class="verify-x" id="verifyX" type="button" aria-label="Close">×</button>
@@ -1656,10 +1737,20 @@ addEventListener('keydown', function(e){
 var deferred = null;
 var pop = document.getElementById('installPop');
 var pageUrl = location.origin + '/?phone=1';
-if(/[?&]phone=1/.test(location.search)) document.documentElement.classList.add('is-phone');
+if(/[?&]phone=1/.test(location.search) || document.documentElement.classList.contains('is-phone')) document.documentElement.classList.add('is-phone');
+var wantInstall = false;
 addEventListener('beforeinstallprompt', function(e){
   e.preventDefault();
   deferred = e;
+  if(wantInstall){
+    wantInstall = false;
+    e.prompt();
+  }
+});
+addEventListener('appinstalled', function(){
+  document.documentElement.classList.remove('is-install');
+  document.documentElement.classList.add('is-app');
+  buildPhone();
 });
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js').catch(function(){});
@@ -1692,7 +1783,6 @@ document.getElementById('installTour').addEventListener('click', function(){
 });
 document.getElementById('installHere').addEventListener('click', function(){
   if(deferred){ deferred.prompt(); deferred = null; return; }
-  document.getElementById('verifyStatus');
   var note = document.getElementById('installUrl');
   note.textContent = 'Use the browser menu: Install app, or Add to Home Screen.';
 });
@@ -1702,6 +1792,56 @@ function storeHint(label){
 document.getElementById('installIos').addEventListener('click', function(){ storeHint('iPhone'); });
 document.getElementById('installAnd').addEventListener('click', function(){ storeHint('Android'); });
 if(!document.documentElement.classList.contains('is-phone')) setTimeout(openInstall, 3200);
+
+function buildPhone(){
+  var host = document.getElementById('phoneCards');
+  if(!host || host.childElementCount) return;
+  (window.HAKIKA_CARDS || []).forEach(function(c){
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'p-card';
+    b.innerHTML = '<div class="shot" style="background:' + c.fall + '">' +
+      (c.img ? '<img src="' + c.img + '" alt="">' : '') +
+      '</div><span class="cap">' + c.l1 + '<br>' + c.l2 + '</span>';
+    b.addEventListener('click', function(){
+      if(c.sensor && window.__verify){ window.__verify(c); return; }
+      document.getElementById('phoneTitle').textContent = c.l1 + ' ' + c.l2;
+      document.getElementById('phoneCopy').textContent = c.text;
+      document.getElementById('phoneImg').src = c.img || '';
+      document.getElementById('phoneDetail').classList.add('show');
+    });
+    host.appendChild(b);
+  });
+}
+document.getElementById('phoneBack').addEventListener('click', function(){
+  document.getElementById('phoneDetail').classList.remove('show');
+});
+var phoneBtn = document.getElementById('phoneInstallBtn');
+var phoneNote = document.getElementById('phoneInstallNote');
+if(/iPhone|iPad|iPod/.test(navigator.userAgent)){
+  phoneBtn.textContent = 'ADD TO HOME SCREEN';
+  phoneNote.textContent = 'Tap Share, then Add to Home Screen. Hakika then opens as an app.';
+}
+phoneBtn.addEventListener('click', function(){
+  if(deferred){
+    deferred.prompt();
+    deferred.userChoice.then(function(choice){
+      if(choice.outcome === 'accepted'){
+        document.documentElement.classList.remove('is-install');
+        document.documentElement.classList.add('is-app');
+        buildPhone();
+      } else {
+        phoneNote.textContent = 'Install was dismissed. Tap Install app again.';
+      }
+    });
+    return;
+  }
+  wantInstall = true;
+  phoneNote.textContent = /iPhone|iPad|iPod/.test(navigator.userAgent)
+    ? 'Tap Share, then Add to Home Screen.'
+    : 'Use the browser menu and choose Install app or Add to Home Screen.';
+});
+if(document.documentElement.classList.contains('is-app')) buildPhone();
 
 var box = document.getElementById('verify');
 var title = document.getElementById('verifyTitle');
