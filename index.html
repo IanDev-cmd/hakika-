@@ -743,6 +743,19 @@ html.is-install #phoneInstall, html.is-app #phoneApp{
 .p-panel img{ width:100%; height:210px; object-fit:cover; border-radius:12px; background:#0d3f6d; }
 .p-panel p{ font-weight:600; color:#2a3340; line-height:1.45; }
 #phoneInstall .install-card{ margin:auto; }
+.onboard-view{ width:min(820px, 96vw); overflow:hidden; }
+.onboard-track{ display:flex; transition:transform .45s cubic-bezier(.4,0,.2,1); }
+.ob-slide{ flex:0 0 100%; box-sizing:border-box; }
+.ob-icon{ width:100%; height:180px; object-fit:contain; background:#0d3f6d; border-radius:12px; margin:14px 0; display:block; }
+.ob-stamp{
+  min-height:42px; margin:0 0 10px; font-size:22px; font-weight:800; letter-spacing:.08em;
+  text-align:center; opacity:0; transform:scale(.6);
+}
+.ob-stamp.show{ animation:obPop .45s cubic-bezier(.2,1.4,.4,1) forwards; }
+.ob-stamp.ok{ color:#1faa45; }
+.ob-stamp.no{ color:#e23b4a; }
+@keyframes obPop{ to{ opacity:1; transform:scale(1); } }
+.ob-actions{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 </style>
 </head>
 <body>
@@ -1084,7 +1097,7 @@ html.is-install #phoneInstall, html.is-app #phoneApp{
       tilt.rotation.x = Math.max(-0.6, Math.min(0.6, tilt.rotation.x));
       window.__globeDrag.y = 0;
       window.__globeDrag.x = 0;
-    } else if(!window.__globeHold){
+    } else {
       spin.rotation.y += 0.0019 + (window.__spinBoost || 0);
     }
     renderer.render(scene, camera);
@@ -1203,7 +1216,6 @@ function buildCard(c){
   b.addEventListener('click', function(){
     if(moved){ moved = false; return; }
     if(c.sensor && window.__verify){ window.__verify(c); return; }
-    open(c, b);
   });
   return b;
 }
@@ -1548,7 +1560,12 @@ function choosePlace(row){
   if(window.__flyTo){
     window.__flyTo(row.lat, row.lng, function(){
       app.classList.add('vx-seek-zoom');
-      setTimeout(function(){ if(window.__openMap) window.__openMap(row); }, 680);
+      setTimeout(function(){
+        if(window.__openMap) window.__openMap(row);
+        if(window.__awaitLocation && window.__locationAdded){
+          setTimeout(function(){ window.__locationAdded(row); }, 900);
+        }
+      }, 680);
     });
   }
 }
@@ -1677,6 +1694,40 @@ addEventListener('keydown', function(e){
     <div class="install-actions">
       <button class="btn-green" id="installTour" type="button">PLAY THE TUTORIAL</button>
       <button class="btn-gray" id="installClose" type="button">CLOSE</button>
+    </div>
+  </div>
+</div>
+<div class="install-pop" id="onboardPop">
+  <div class="onboard-view" id="onboardView">
+    <div class="onboard-track" id="onboardTrack">
+      <div class="install-card ob-slide">
+        <div class="install-head"><div class="install-num">01</div><div><strong>FACE</strong><small>Look at the camera</small></div></div>
+        <img class="ob-icon" src="hakika-photos/hakika-face.svg" alt="">
+        <div class="ob-stamp" data-stamp="face"></div>
+        <div class="ob-actions"><button class="btn-gray ob-start" type="button" data-sensor="face">START</button><button class="btn-green ob-next" type="button">NEXT</button></div>
+      </div>
+      <div class="install-card ob-slide">
+        <div class="install-head"><div class="install-num">02</div><div><strong>FINGER</strong><small>Use the phone biometric</small></div></div>
+        <img class="ob-icon" src="hakika-photos/hakika-finger.svg" alt="">
+        <div class="ob-stamp" data-stamp="finger"></div>
+        <div class="ob-actions"><button class="btn-gray ob-start" type="button" data-sensor="finger">START</button><button class="btn-green ob-next" type="button">NEXT</button></div>
+      </div>
+      <div class="install-card ob-slide">
+        <div class="install-head"><div class="install-num">03</div><div><strong>VOICE</strong><small>Read the phrase aloud</small></div></div>
+        <img class="ob-icon" src="hakika-photos/hakika-voice.svg" alt="">
+        <div class="ob-stamp" data-stamp="voice"></div>
+        <div class="ob-actions"><button class="btn-gray ob-start" type="button" data-sensor="voice">START</button><button class="btn-green ob-next" type="button">NEXT</button></div>
+      </div>
+      <div class="install-card ob-slide">
+        <div class="install-head"><div class="install-num">04</div><div><strong>LOCATION</strong><small>Search bar</small></div></div>
+        <p class="install-copy">Add a place in the search bar. The globe zooms there, then you return to the globe.</p>
+        <button class="btn-green" id="obSearch" type="button">USE THE SEARCH BAR</button>
+      </div>
+    </div>
+    <div class="install-card" id="locAdded" style="display:none">
+      <div class="install-head"><div class="install-num">05</div><div><strong>LOCATION ADDED</strong><small id="locAddedName"></small></div></div>
+      <p class="install-copy">The place is on the globe.</p>
+      <button class="btn-green" id="locBack" type="button">BACK TO GLOBE</button>
     </div>
   </div>
 </div>
@@ -2029,6 +2080,7 @@ function runFaceMatch(canvas){
       go.disabled = false;
       go.textContent = 'DONE';
       phase = 'done';
+      if(window.__stepResult) window.__stepResult(ok);
     })(t0);
   });
 }
@@ -2157,10 +2209,12 @@ function startVoice(){
             status.textContent = 'Voice verified. The sample was loud enough and matched the phrase.';
             go.textContent = 'DONE';
             phase = 'done';
+            if(window.__stepResult) window.__stepResult(true);
           }).catch(function(err){
             status.textContent = err.message || 'Voice check failed.';
             go.textContent = 'TRY AGAIN';
             phase = 'start';
+            if(window.__stepResult) window.__stepResult(false);
           });
         };
         reader.readAsDataURL(blob);
@@ -2219,12 +2273,19 @@ function startFinger(){
     });
   }).then(function(){
     go.disabled = false;
+    if(document.getElementById('onboardPop').classList.contains('show')){
+      status.textContent = 'Fingerprint confirmed.';
+      phase = 'done';
+      if(window.__stepResult) window.__stepResult(true);
+      return;
+    }
     status.textContent = 'Fingerprint confirmed. Read the phrase on the next step.';
     title.textContent = 'Voice verification';
     mode = 'voice';
     return startVoice();
   }).catch(function(err){
     go.disabled = false;
+    if(window.__stepResult && document.getElementById('onboardPop').classList.contains('show')) window.__stepResult(false);
     status.textContent = err && err.name === 'NotAllowedError'
       ? 'Finger scan was cancelled.'
       : (err && err.message ? err.message : 'No platform finger scanner is available on this device.');
@@ -2284,6 +2345,75 @@ function startFinger(){
     var app = document.getElementById('app');
     app.classList.remove('vx-seek', 'vx-seek-zoom');
     window.__globeHold = false;
+  });
+})();
+</script>
+<script>
+(function(){
+  var pop = document.getElementById('onboardPop');
+  var track = document.getElementById('onboardTrack');
+  var added = document.getElementById('locAdded');
+  var index = 0;
+  var sensors = ['face','finger','voice','location'];
+  function show(i){
+    index = Math.max(0, Math.min(sensors.length - 1, i));
+    track.style.display = 'flex';
+    added.style.display = 'none';
+    track.style.transform = 'translateX(' + (-index * 100) + '%)';
+    pop.classList.add('show');
+  }
+  function cardFor(sensor){
+    var cards = window.HAKIKA_CARDS || [];
+    for(var i = 0; i < cards.length; i++) if(cards[i].sensor === sensor) return cards[i];
+    return null;
+  }
+  document.getElementById('watch').addEventListener('click', function(){ show(0); });
+  pop.addEventListener('click', function(e){
+    var start = e.target.closest('.ob-start');
+    var next = e.target.closest('.ob-next');
+    if(start){
+      var card = cardFor(start.dataset.sensor);
+      if(card && window.__verify) window.__verify(card);
+    }
+    if(next) show(index + 1);
+  });
+  var sx = 0;
+  pop.addEventListener('pointerdown', function(e){ sx = e.clientX; });
+  pop.addEventListener('pointerup', function(e){
+    var dx = e.clientX - sx;
+    if(Math.abs(dx) < 50) return;
+    show(index + (dx < 0 ? 1 : -1));
+  });
+  document.getElementById('obSearch').addEventListener('click', function(){
+    pop.classList.remove('show');
+    window.__awaitLocation = true;
+    var find = document.getElementById('vxFind');
+    find.focus();
+    find.placeholder = 'ADD A LOCATION';
+  });
+  window.__stepResult = function(ok){
+    var stamp = document.querySelector('[data-stamp="' + sensors[index] + '"]');
+    if(!stamp) return;
+    stamp.textContent = ok ? 'VERIFIED' : 'VERIFICATION FAILED';
+    stamp.className = 'ob-stamp show ' + (ok ? 'ok' : 'no');
+    var box = document.getElementById('verify');
+    if(box) box.classList.remove('show');
+  };
+  window.__locationAdded = function(row){
+    window.__awaitLocation = false;
+    track.style.display = 'none';
+    added.style.display = 'block';
+    document.getElementById('locAddedName').textContent = row.name;
+    pop.classList.add('show');
+  };
+  document.getElementById('locBack').addEventListener('click', function(){
+    pop.classList.remove('show');
+    var map = document.getElementById('map2d-overlay');
+    if(map) map.classList.remove('open');
+    var app = document.getElementById('app');
+    app.classList.remove('vx-seek','vx-seek-zoom','detail');
+    window.__globeHold = false;
+    window.__awaitLocation = false;
   });
 })();
 </script>
