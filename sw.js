@@ -1,4 +1,4 @@
-var CACHE = 'hakika-v8';
+var CACHE = 'hakika-v9';
 var FILES = [
   '/',
   '/index.html',
