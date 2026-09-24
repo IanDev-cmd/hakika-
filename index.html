@@ -12,6 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
 <style>
 /* =====================================================================
@@ -342,9 +343,21 @@ html, body, a, button, .card{ cursor:none; }
 .vx-spacer{ flex:1; }
 .vx-link{ background:none; border:none; color:#e7f4ff; font:inherit; letter-spacing:.16em; font-size:.72vw; font-weight:600; padding:0; }
 .vx-search{
-  display:flex; align-items:center; gap:.4vw;
+  position:relative; display:flex; align-items:center; gap:.4vw;
   border-bottom:1px solid rgba(255,255,255,.45); padding:0 0 .15vw;
 }
+.vx-hits{
+  position:absolute; top:calc(100% + 8px); right:0; width:280px; margin:0; padding:6px;
+  list-style:none; background:#fff; color:#102033; border-radius:12px;
+  box-shadow:0 16px 40px rgba(0,20,50,.28); z-index:30; display:none;
+}
+.vx-hits.show{ display:block; }
+.vx-hits button{
+  width:100%; text-align:left; border:none; background:transparent; color:inherit;
+  font:inherit; font-weight:700; padding:8px 10px; border-radius:8px; cursor:pointer;
+}
+.vx-hits button small{ display:block; font-weight:600; color:#5c6b7a; }
+.vx-hits button:hover{ background:#e7f4ff; }
 .vx-search input{
   width:9vw; min-width:72px; background:none; border:none; outline:none;
   color:#fff; font:inherit; letter-spacing:.08em; font-size:.72vw; font-weight:600;
@@ -393,11 +406,10 @@ html, body, a, button, .card{ cursor:none; }
 }
 .vx-brand{
   display:flex; align-items:center; justify-content:center;
-  font-size:6.4vw; font-weight:700; line-height:1; color:#fff; letter-spacing:-.04em;
+  font-size:32.2vw; font-weight:700; line-height:1; color:#fff; letter-spacing:-.04em;
 }
 .vx-mini{
-  width:2.35vw; height:2.35vw; min-width:22px; min-height:22px;
-  margin:0 .28vw; border-radius:50%; overflow:hidden; flex:0 0 auto;
+  width:.72em; height:.72em; margin:0 .02em; border-radius:50%; overflow:hidden; flex:0 0 auto;
 }
 .vx-mini canvas{ width:100%; height:100%; display:block; }
 .vx-digital{
@@ -645,10 +657,38 @@ html, body, a, button, .card{ cursor:none; }
   .globe-wrap{ left:16%; top:38%; width:68%; }
   .list{ left:58%; width:38%; top:22%; bottom:8%; }
   .watch{ left:6%; top:auto; bottom:6%; width:46%; height:44px; }
-  .vx-brand{ font-size:12vw; }
   .vx-digital{ font-size:7vw; }
-  .vx-mini{ width:7vw; height:7vw; }
 }
+.app.vx-seek .globe-wrap{
+  left:18%; top:calc(50% - 32vw); width:64%;
+}
+.app.vx-seek-zoom .globe-wrap{
+  left:-12%; top:-22%; width:124%;
+}
+#map2d-overlay{
+  position:fixed; inset:0; background:#06315f;
+  opacity:0; pointer-events:none; transform:scale(1.08);
+  transition:opacity .55s ease, transform .55s ease; z-index:60;
+}
+#map2d-overlay.open{ opacity:1; pointer-events:auto; transform:scale(1); }
+#map2d-topbar{
+  position:absolute; top:0; left:0; right:0; height:64px; z-index:2;
+  background:#fff; display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:0 16px;
+}
+.m2d-title #m2d-name{ display:block; font-weight:700; font-size:1.05rem; color:#102033; }
+.m2d-title #m2d-sub{ display:block; font-size:.72rem; color:#5c6b7a; }
+.m2d-layers{ display:flex; gap:6px; }
+.layer-btn{
+  padding:7px 11px; background:transparent; border:1px solid #d5deea; color:#5c6b7a;
+  border-radius:8px; font:inherit; font-size:.72rem; font-weight:700; cursor:pointer;
+}
+.layer-btn.active{ background:#102033; color:#fff; border-color:#102033; }
+#m2d-close{
+  padding:8px 14px; background:#1faa45; color:#fff; border:none; border-radius:8px;
+  font:inherit; font-weight:800; cursor:pointer;
+}
+#leaflet-map{ position:absolute; top:64px; left:0; right:0; bottom:0; background:#0C1130; }
 .verify-x{
   position:absolute; right:10px; top:8px; border:none; background:none;
   font-size:22px; cursor:pointer; color:#1a2733;
@@ -685,7 +725,8 @@ html, body, a, button, .card{ cursor:none; }
     <button class="vx-link vx-hit" id="vxSignup" type="button">SUBSCRIBER</button>
     <label class="vx-search">
       <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="11" cy="11" r="6"/><path d="M16 16l5 5"/></svg>
-      <input id="vxFind" type="search" placeholder="SEARCH" aria-label="Search places">
+      <input id="vxFind" type="search" placeholder="SEARCH" aria-label="Search places" autocomplete="off">
+      <ul class="vx-hits" id="vxHits"></ul>
     </label>
     <button class="vx-menu vx-hit" id="vxMenu" type="button" aria-label="Menu"><i></i><i></i><i></i></button>
   </div>
@@ -696,7 +737,7 @@ html, body, a, button, .card{ cursor:none; }
     <button class="vx-dot vx-hit" type="button" data-step="3" aria-label="Book"></button>
   </div>
   <div class="vx-world" aria-hidden="true">
-    <div class="vx-brand"><span>H</span><span class="vx-mini"><canvas id="miniA" width="128" height="128"></canvas></span><span>kik</span><span class="vx-mini"><canvas id="miniB" width="128" height="128"></canvas></span></div>
+    <div class="vx-brand" id="vxBrand"><span>H</span><span class="vx-mini"><canvas id="miniA" width="128" height="128"></canvas></span><span>KIK</span><span class="vx-mini"><canvas id="miniB" width="128" height="128"></canvas></span></div>
     <p class="vx-digital">Digital ID</p>
   </div>
   <h2 class="vx-country" id="vxCountry">EQUATOR</h2>
@@ -739,7 +780,7 @@ html, body, a, button, .card{ cursor:none; }
   <div class="pin"></div>
 
   <div class="hero" id="hero">
-    <h1>Register the<br>line</h1>
+    <h1>Your Verified<br>Digital ID</h1>
     <p>SIM registration still fails for people who only have USSD. Paper KYC and smartphone-only checks leave rural lines unregistered.</p>
   </div>
 
@@ -765,6 +806,22 @@ html, body, a, button, .card{ cursor:none; }
     </div>
   </div>
 
+</div>
+
+<div id="map2d-overlay">
+  <div id="map2d-topbar">
+    <div class="m2d-title">
+      <span id="m2d-name">Place</span>
+      <span id="m2d-sub"></span>
+    </div>
+    <div class="m2d-layers">
+      <button class="layer-btn active" type="button" data-layer="satellite">Satellite</button>
+      <button class="layer-btn" type="button" data-layer="topo">Topo</button>
+      <button class="layer-btn" type="button" data-layer="street">Street</button>
+    </div>
+    <button id="m2d-close" type="button">BACK TO GLOBE</button>
+  </div>
+  <div id="leaflet-map"></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -899,9 +956,22 @@ html, body, a, button, .card{ cursor:none; }
   mark.visible = false;
   spin.add(mark);
   window.__markPlace = function(lat, lng){
+    window.__flyTo(lat, lng);
+  };
+  window.__flyTo = function(lat, lng, done){
     mark.position.copy(latLonVec(lat, lng, R * 1.02));
     mark.visible = true;
-    window.__globeAim = { y: -(lng) * Math.PI / 180 + Math.PI * 0.5 };
+    var target = -(lng) * Math.PI / 180 + Math.PI * 0.5;
+    var dy = target - spin.rotation.y;
+    while(dy > Math.PI) dy -= Math.PI * 2;
+    while(dy < -Math.PI) dy += Math.PI * 2;
+    window.__globeAim = {
+      from: spin.rotation.y,
+      to: spin.rotation.y + dy,
+      t0: performance.now(),
+      dur: 720,
+      done: done || null
+    };
   };
   window.__clearMark = function(){ mark.visible = false; window.__globeAim = null; };
   window.__projectLatLng = function(lat, lng){
@@ -948,13 +1018,16 @@ html, body, a, button, .card{ cursor:none; }
   (function loop(){
     requestAnimationFrame(loop);
     sync();
-    if(window.__globeAim){
+    if(window.__globeAim && window.__globeAim.t0){
       var aim = window.__globeAim;
-      var dy = aim.y - spin.rotation.y;
-      while(dy > Math.PI) dy -= Math.PI * 2;
-      while(dy < -Math.PI) dy += Math.PI * 2;
-      spin.rotation.y += dy * 0.06;
-      if(Math.abs(dy) < 0.012) window.__globeAim = null;
+      var t = Math.min(1, (performance.now() - aim.t0) / aim.dur);
+      var e = 1 - Math.pow(1 - t, 3);
+      spin.rotation.y = aim.from + (aim.to - aim.from) * e;
+      if(t >= 1){
+        var done = aim.done;
+        window.__globeAim = null;
+        if(done) done();
+      }
     } else if(window.__globeDrag){
       spin.rotation.y += window.__globeDrag.y;
       tilt.rotation.x += window.__globeDrag.x;
@@ -1362,8 +1435,20 @@ function paintMinis(){
   });
 }
 (function miniLoop(){ requestAnimationFrame(miniLoop); paintMinis(); })();
+function fitLanding(){
+  var g = document.getElementById('globeWrap');
+  var brand = document.getElementById('vxBrand');
+  if(!g || !brand) return;
+  var diameter = g.getBoundingClientRect().width;
+  if(diameter < 8) return;
+  brand.style.fontSize = diameter + 'px';
+  var height = brand.getBoundingClientRect().height;
+  if(height > 0) brand.style.fontSize = (diameter * diameter / height) + 'px';
+}
 function playLanding(){
   setStep(1);
+  fitLanding();
+  requestAnimationFrame(fitLanding);
   clearTimeout(landTimer);
   landTimer = setTimeout(function(){ if(step === 1) setStep(0); }, 2800);
 }
@@ -1385,6 +1470,82 @@ document.getElementById('vxDrawer').addEventListener('click', function(e){
   setStep(n);
 });
 document.getElementById('vxHome').addEventListener('click', function(){ setStep(0); });
+addEventListener('resize', fitLanding);
+
+var find = document.getElementById('vxFind');
+var hits = document.getElementById('vxHits');
+var findTimer = 0;
+function showHits(rows){
+  hits.innerHTML = '';
+  rows.forEach(function(row){
+    var li = document.createElement('li');
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.innerHTML = row.name + '<small>' + row.sub + '</small>';
+    b.addEventListener('click', function(){ choosePlace(row); });
+    li.appendChild(b);
+    hits.appendChild(li);
+  });
+  hits.classList.toggle('show', rows.length > 0);
+}
+function choosePlace(row){
+  hits.classList.remove('show');
+  find.value = row.name;
+  setStep(0);
+  app.classList.remove('vx-seek-zoom');
+  app.classList.add('vx-seek');
+  window.__globeHold = true;
+  if(window.__flyTo){
+    window.__flyTo(row.lat, row.lng, function(){
+      app.classList.add('vx-seek-zoom');
+      setTimeout(function(){ if(window.__openMap) window.__openMap(row); }, 680);
+    });
+  }
+}
+find.addEventListener('input', function(){
+  var q = find.value.trim();
+  clearTimeout(findTimer);
+  if(q.length < 2){ hits.classList.remove('show'); return; }
+  findTimer = setTimeout(function(){ searchPlaces(q); }, 220);
+});
+find.addEventListener('keydown', function(e){
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    var first = hits.querySelector('button');
+    if(first) first.click();
+    else searchPlaces(find.value.trim());
+  }
+});
+function searchPlaces(q){
+  var local = PLACES.filter(function(p){
+    return (p.name + ' ' + p.country).toLowerCase().indexOf(q.toLowerCase()) >= 0;
+  }).map(function(p){
+    return { name:p.name, sub:p.country, lat:p.lat, lng:p.lng };
+  });
+  showHits(local);
+  fetch('https://photon.komoot.io/api/?limit=5&q=' + encodeURIComponent(q))
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      var remote = (data.features || []).map(function(f){
+        var props = f.properties || {};
+        var c = f.geometry && f.geometry.coordinates || [0, 0];
+        return {
+          name: props.name || q,
+          sub: [props.city, props.state, props.country].filter(Boolean).join(', '),
+          lat: c[1],
+          lng: c[0]
+        };
+      });
+      var seen = {};
+      showHits(local.concat(remote).filter(function(row){
+        var key = row.name + row.lat.toFixed(2);
+        if(seen[key]) return false;
+        seen[key] = true;
+        return true;
+      }).slice(0, 6));
+    })
+    .catch(function(){ showHits(local); });
+}
 document.getElementById('vxMenu').addEventListener('click', function(){ drawer.classList.toggle('show'); });
 function openModal(title){
   document.getElementById('vxModalTitle').textContent = title;
@@ -1932,5 +2093,59 @@ function startFinger(){
 })();
 </script>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function(){
+  var leafletMap = null, leafletMarker = null, leafletLayers = null, activeLayerKey = 'satellite';
+  function ensureLeafletMap(){
+    if(leafletMap) return;
+    leafletMap = L.map('leaflet-map', { zoomControl:true, attributionControl:true, worldCopyJump:true });
+    leafletLayers = {
+      satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri',
+        maxZoom: 18
+      }),
+      topo: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap, SRTM | &copy; OpenTopoMap',
+        maxZoom: 17, subdomains: ['a','b','c']
+      }),
+      street: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 19, subdomains: ['a','b','c']
+      })
+    };
+    leafletLayers.satellite.addTo(leafletMap);
+    document.querySelectorAll('.layer-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var key = btn.dataset.layer;
+        if(key === activeLayerKey) return;
+        leafletMap.removeLayer(leafletLayers[activeLayerKey]);
+        leafletLayers[key].addTo(leafletMap);
+        activeLayerKey = key;
+        document.querySelectorAll('.layer-btn').forEach(function(b){ b.classList.toggle('active', b === btn); });
+      });
+    });
+  }
+  window.__openMap = function(place){
+    ensureLeafletMap();
+    document.getElementById('m2d-name').textContent = place.name;
+    document.getElementById('m2d-sub').textContent = place.sub || '';
+    document.getElementById('map2d-overlay').classList.add('open');
+    setTimeout(function(){
+      leafletMap.invalidateSize();
+      leafletMap.setView([place.lat, place.lng], 12);
+      if(leafletMarker) leafletMap.removeLayer(leafletMarker);
+      leafletMarker = L.marker([place.lat, place.lng]).addTo(leafletMap)
+        .bindPopup('<strong>' + place.name + '</strong><br>' + (place.sub || '')).openPopup();
+    }, 80);
+  };
+  document.getElementById('m2d-close').addEventListener('click', function(){
+    document.getElementById('map2d-overlay').classList.remove('open');
+    var app = document.getElementById('app');
+    app.classList.remove('vx-seek', 'vx-seek-zoom');
+    window.__globeHold = false;
+  });
+})();
+</script>
 </body>
 </html>
